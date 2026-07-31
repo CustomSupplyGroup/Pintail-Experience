@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSelectedTrip } from "@/lib/trip";
-import { getTripCurriculum } from "@/lib/content";
 import { daysUntilDate } from "@/lib/utils";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +56,6 @@ export default async function TripInfoPage() {
     { data: pages, error: pagesError },
     { data: vendorRows, error: vendorsError },
     { data: schedule, error: scheduleError },
-    { sessions: curriculum },
   ] = await Promise.all([
     supabase
       .from("trip_pages")
@@ -76,7 +74,6 @@ export default async function TripInfoPage() {
       .eq("visible_to_attendees", true)
       .order("day_number", { ascending: true })
       .order("start_time", { ascending: true, nullsFirst: true }),
-    getTripCurriculum(supabase, trip.id),
   ]);
 
   if (pagesError) console.error("trip info: pages read failed", pagesError.message);
@@ -154,24 +151,6 @@ export default async function TripInfoPage() {
             <Markdown>{p.content}</Markdown>
           </section>
         ) : null,
-      )}
-
-      {/* Teaching */}
-      {curriculum.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-serif text-2xl text-primary">The Teaching</h2>
-          <Link href="/curriculum">
-            <Card className="transition-colors hover:border-primary">
-              <CardContent className="flex items-center justify-between py-4">
-                <span className="text-sm text-foreground/90">
-                  {curriculum.length} teaching{" "}
-                  {curriculum.length === 1 ? "session" : "sessions"}
-                </span>
-                <span className="text-sm text-primary">Open the library →</span>
-              </CardContent>
-            </Card>
-          </Link>
-        </section>
       )}
 
       {/* The Hosting Team */}

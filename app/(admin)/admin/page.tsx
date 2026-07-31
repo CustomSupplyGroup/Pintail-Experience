@@ -39,7 +39,7 @@ export default async function AdminDashboard() {
     console.error("dashboard inquiries count failed:", inquiriesError.message);
   }
 
-  // Upcoming Hunts — every trip that isn't in the past, with seats filled/left.
+  // Upcoming Trips — every trip that isn't in the past, with seats filled/left.
   const { data: trips, error: tripsError } = await supabase
     .from("trips")
     .select("id, name, start_date, end_date, capacity")
@@ -111,12 +111,12 @@ export default async function AdminDashboard() {
           </Card>
         </Link>
 
-        {/* Upcoming Hunts */}
-        <Link href="/admin/hunts" className="md:col-span-1">
+        {/* Upcoming Trips */}
+        <Link href="/admin/trips" className="md:col-span-1">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="text-sm font-normal text-muted-foreground">
-                Upcoming Hunts
+                Upcoming Trips
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -128,15 +128,15 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Upcoming Hunts detail — seats filled / left per trip. */}
+      {/* Upcoming Trips detail — seats filled / left per trip. */}
       <div className="mt-8">
         <h2 className="mb-3 font-heading text-xl italic tracking-tight">
-          Upcoming Hunts
+          Upcoming Trips
         </h2>
         {tripsError ? (
-          <EmptyState>Couldn&apos;t load hunts: {tripsError.message}</EmptyState>
+          <EmptyState>Couldn&apos;t load trips: {tripsError.message}</EmptyState>
         ) : hunts.length === 0 ? (
-          <EmptyState>No upcoming hunts on the books.</EmptyState>
+          <EmptyState>No upcoming trips on the books.</EmptyState>
         ) : (
           <ul className="space-y-2">
             {hunts.map((h) => {
@@ -146,7 +146,7 @@ export default async function AdminDashboard() {
               return (
                 <li key={h.id}>
                   <Link
-                    href={`/admin/hunts/${h.id}`}
+                    href={`/admin/trips/${h.id}`}
                     className="flex items-center justify-between gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary"
                   >
                     <div>

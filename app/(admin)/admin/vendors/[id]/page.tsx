@@ -162,7 +162,7 @@ export default async function EditVendorPage({
             {tripHistory.map(({ trip, role_on_trip }) => (
               <li key={trip.id}>
                 <Link
-                  href={`/admin/hunts/${trip.id}`}
+                  href={`/admin/trips/${trip.id}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary"
                 >
                   <div>

@@ -98,7 +98,7 @@ export async function inviteAttendees(
     }
   }
 
-  revalidatePath("/admin/roster");
+  revalidatePath("/admin/trips");
 
   if (invited === 0) {
     return { ok: false, message: `No invites sent. ${failures.join("; ")}` };

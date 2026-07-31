@@ -9,10 +9,10 @@ export default function InvitePage() {
   return (
     <div className="mx-auto max-w-xl">
       <Link
-        href="/admin/roster"
+        href="/admin/trips"
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Back to roster
+        ← Back to trips
       </Link>
       <div className="mt-2">
         <PageHeader
