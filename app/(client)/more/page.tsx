@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isStaff } from "@/lib/auth";
-import { getMemberTrips } from "@/lib/trip";
+import { getSelectedTrip } from "@/lib/trip";
+import { fmtRange } from "@/lib/dates";
 import { PageHeader } from "@/components/page-header";
+import {
+  ReadinessChecklist,
+  type ReadinessRow,
+} from "@/components/readiness-checklist";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,21 +19,6 @@ function fmtMonthYear(d: string | null): string {
     month: "long",
     year: "numeric",
   });
-}
-
-function fmtRange(start: string | null, end: string | null): string {
-  if (!start) return "Dates coming soon";
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const s = new Date(`${start}T00:00:00`).toLocaleDateString("en-US", opts);
-  const e = end
-    ? new Date(`${end}T00:00:00`).toLocaleDateString("en-US", {
-        ...opts,
-        year: "numeric",
-      })
-    : new Date(`${start}T00:00:00`).toLocaleDateString("en-US", {
-        year: "numeric",
-      });
-  return `${s} – ${e}`;
 }
 
 export default async function MorePage() {
@@ -43,16 +33,59 @@ export default async function MorePage() {
     .slice(0, 2)
     .toUpperCase();
 
-  let myTrips: Awaited<ReturnType<typeof getMemberTrips>>["trips"] = [];
+  let myTrips: Awaited<ReturnType<typeof getSelectedTrip>>["memberTrips"] = [];
+  let readiness: ReadinessRow[] | null = null;
   if (user) {
-    const { trips, error } = await getMemberTrips(supabase, user.id);
-    if (error) console.error("more: member trips read failed", error);
-    myTrips = trips;
+    const { trip, memberTrips, error } = await getSelectedTrip(supabase, user);
+    if (error) console.error("more: selected trip read failed", error);
+    myTrips = memberTrips;
+
+    if (trip) {
+      const { data: attendee, error: attendeeError } = await supabase
+        .from("trip_attendees")
+        .select("shirt_size, waiver_signed_at, amount_paid_cents")
+        .eq("trip_id", trip.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (attendeeError)
+        console.error("more: attendee read failed", attendeeError.message);
+
+      const profileDone =
+        Boolean(user.full_name) && Boolean(attendee?.shirt_size);
+      const waiverDone = Boolean(attendee?.waiver_signed_at);
+      const price = trip.price_cents;
+      const paymentDone =
+        price == null ||
+        price === 0 ||
+        (attendee?.amount_paid_cents ?? 0) >= price;
+
+      readiness = [
+        {
+          label: "Complete your profile",
+          done: profileDone,
+          href: "/onboarding",
+          hint: profileDone ? undefined : "Name & sizes",
+        },
+        {
+          label: "Sign the waiver",
+          done: waiverDone,
+          href: "/waiver",
+        },
+        {
+          label: "Payment",
+          done: paymentDone,
+          href: "/home",
+          hint: paymentDone ? undefined : "Balance due",
+        },
+      ];
+    }
   }
 
   return (
     <div className="space-y-6">
       <PageHeader title="More" />
+
+      {readiness && <ReadinessChecklist rows={readiness} />}
 
       {/* Profile */}
       <Card>

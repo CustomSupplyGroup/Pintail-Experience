@@ -170,4 +170,17 @@
   .animate-rise {
     animation: pintail-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+
+  /* Slow Ken Burns drift on the hero backdrop until the brand film ships. */
+  @keyframes pintail-drift {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.06);
+    }
+  }
+  .animate-drift {
+    animation: pintail-drift 12s ease-in-out infinite alternate;
+  }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { publicPhotoUrl } from "@/lib/photos";
@@ -16,16 +16,32 @@ export function PhotoGallery({
   tripId: string | null;
 }) {
   const [photos, setPhotos] = useState<Photo[]>(initial);
-  const [active, setActive] = useState<Photo | null>(null);
+  // Track the active index (not the photo object) so prev/next can walk the list.
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
-  // Lightbox as a real dialog: Escape to close, body-scroll lock, move focus to
-  // the close button and restore it to the opening thumbnail on close.
+  const active = activeIndex !== null ? (photos[activeIndex] ?? null) : null;
+  const hasPrev = activeIndex !== null && activeIndex > 0;
+  const hasNext = activeIndex !== null && activeIndex < photos.length - 1;
+
+  const go = (delta: number) =>
+    setActiveIndex((i) => {
+      if (i === null) return i;
+      const next = i + delta;
+      if (next < 0 || next >= photos.length) return i;
+      return next;
+    });
+
+  // Lightbox as a real dialog: Escape to close, arrows to navigate, body-scroll
+  // lock, move focus to the close button and restore it to the opening thumbnail.
   useEffect(() => {
-    if (!active) return;
+    if (activeIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActive(null);
+      if (e.key === "Escape") setActiveIndex(null);
+      else if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -37,7 +53,8 @@ export function PhotoGallery({
       openerRef.current?.focus();
       openerRef.current = null;
     };
-  }, [active]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex === null, photos.length]);
 
   useEffect(() => {
     if (!tripId) return;
@@ -78,13 +95,13 @@ export function PhotoGallery({
   return (
     <>
       <div className="grid grid-cols-3 gap-1.5">
-        {photos.map((p) => (
+        {photos.map((p, i) => (
           <button
             key={p.id}
             type="button"
             onClick={(e) => {
               openerRef.current = e.currentTarget;
-              setActive(p);
+              setActiveIndex(i);
             }}
             className="aspect-square overflow-hidden rounded-md"
           >
@@ -105,7 +122,18 @@ export function PhotoGallery({
           aria-modal="true"
           aria-label={active.caption ?? "Trip photo"}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4"
-          onClick={() => setActive(null)}
+          onClick={() => setActiveIndex(null)}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStartX.current;
+            touchStartX.current = null;
+            if (start === null) return;
+            const dx = (e.changedTouches[0]?.clientX ?? start) - start;
+            if (Math.abs(dx) < 50) return;
+            go(dx < 0 ? 1 : -1);
+          }}
         >
           <button
             ref={closeRef}
@@ -113,12 +141,40 @@ export function PhotoGallery({
             aria-label="Close photo"
             onClick={(e) => {
               e.stopPropagation();
-              setActive(null);
+              setActiveIndex(null);
             }}
             className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             <X className="size-5" />
           </button>
+
+          {hasPrev && (
+            <button
+              type="button"
+              aria-label="Previous photo"
+              onClick={(e) => {
+                e.stopPropagation();
+                go(-1);
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronLeft className="size-6" />
+            </button>
+          )}
+          {hasNext && (
+            <button
+              type="button"
+              aria-label="Next photo"
+              onClick={(e) => {
+                e.stopPropagation();
+                go(1);
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronRight className="size-6" />
+            </button>
+          )}
+
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={publicPhotoUrl(active.storage_path)}

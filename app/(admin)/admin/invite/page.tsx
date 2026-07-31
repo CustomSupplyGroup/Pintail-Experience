@@ -1,23 +1,50 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { serviceRoleConfigured } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/page-header";
 import { InviteForm } from "./invite-form";
 
-export default function InvitePage() {
+export default async function InvitePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trip?: string }>;
+}) {
   const configured = serviceRoleConfigured();
+  const { trip: tripId } = await searchParams;
+
+  // When a trip is passed, name it so it's clear who these invites enroll.
+  let tripName: string | null = null;
+  if (tripId) {
+    const supabase = await createClient();
+    const { data: trip, error } = await supabase
+      .from("trips")
+      .select("name")
+      .eq("id", tripId)
+      .maybeSingle();
+    if (error) {
+      console.error("invite: trip name lookup failed", error.message);
+    }
+    tripName = trip?.name ?? null;
+  }
+
+  const backHref = tripId ? `/admin/trips/${tripId}/roster` : "/admin/trips";
 
   return (
     <div className="mx-auto max-w-xl">
       <Link
-        href="/admin/trips"
+        href={backHref}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Back to trips
+        ← Back
       </Link>
       <div className="mt-2">
         <PageHeader
           title="Invite attendees"
-          subtitle="One email per line. Optionally as “Name <email>”."
+          subtitle={
+            tripName
+              ? `Enrolling into ${tripName}. One email per line, optionally as “Name <email>”.`
+              : "One email per line. Optionally as “Name <email>”."
+          }
         />
       </div>
 
@@ -34,7 +61,7 @@ export default function InvitePage() {
         </div>
       )}
 
-      <InviteForm />
+      <InviteForm tripId={tripId ?? null} />
     </div>
   );
 }

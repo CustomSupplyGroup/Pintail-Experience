@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const initialState: InviteState = { ok: false, message: "" };
 
-export function InviteForm() {
+export function InviteForm({ tripId }: { tripId?: string | null }) {
   const [state, formAction, pending] = useActionState(
     inviteAttendees,
     initialState,
@@ -22,6 +22,7 @@ export function InviteForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      {tripId && <input type="hidden" name="trip" value={tripId} />}
       <div className="space-y-2">
         <Label htmlFor="emails">Emails</Label>
         <Textarea

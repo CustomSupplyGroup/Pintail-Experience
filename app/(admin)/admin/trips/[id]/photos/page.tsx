@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
@@ -40,12 +39,6 @@ export default async function PhotosAdminPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
       <PageHeader
         title="Photos"
         subtitle="Upload from the field. Toggle which appear in the public gallery."

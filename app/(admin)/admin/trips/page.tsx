@@ -24,6 +24,8 @@ type TripCard = {
   planning_status: PlanningStatus;
   owner: string | null;
   filled: number;
+  waiversSigned: number;
+  roomsAssigned: number;
 };
 
 function formatDates(start: string | null, end: string | null): string {
@@ -73,30 +75,44 @@ export default async function TripsBoardPage() {
     }
   }
 
-  // Attendee counts per trip.
+  // Attendee readiness per trip — one query, grouped in JS (cheap at this scale).
   const { data: attendeeRows, error: attendeeError } = await supabase
     .from("trip_attendees")
-    .select("trip_id");
+    .select("trip_id, waiver_signed_at, room_assignment");
   if (attendeeError) {
     console.error("trips board: attendee counts failed", attendeeError.message);
   }
-  const filledByTrip = new Map<string, number>();
+  type Readiness = { filled: number; waivers: number; rooms: number };
+  const readinessByTrip = new Map<string, Readiness>();
   for (const row of attendeeRows ?? []) {
-    filledByTrip.set(row.trip_id, (filledByTrip.get(row.trip_id) ?? 0) + 1);
+    const r = readinessByTrip.get(row.trip_id) ?? {
+      filled: 0,
+      waivers: 0,
+      rooms: 0,
+    };
+    r.filled += 1;
+    if (row.waiver_signed_at) r.waivers += 1;
+    if (row.room_assignment) r.rooms += 1;
+    readinessByTrip.set(row.trip_id, r);
   }
 
-  const cards: TripCard[] = (trips ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    start_date: t.start_date,
-    end_date: t.end_date,
-    capacity: t.capacity,
-    planning_status: t.planning_status,
-    owner: t.planning_owner_id
-      ? (ownerNames.get(t.planning_owner_id) ?? null)
-      : null,
-    filled: filledByTrip.get(t.id) ?? 0,
-  }));
+  const cards: TripCard[] = (trips ?? []).map((t) => {
+    const r = readinessByTrip.get(t.id);
+    return {
+      id: t.id,
+      name: t.name,
+      start_date: t.start_date,
+      end_date: t.end_date,
+      capacity: t.capacity,
+      planning_status: t.planning_status,
+      owner: t.planning_owner_id
+        ? (ownerNames.get(t.planning_owner_id) ?? null)
+        : null,
+      filled: r?.filled ?? 0,
+      waiversSigned: r?.waivers ?? 0,
+      roomsAssigned: r?.rooms ?? 0,
+    };
+  });
 
   return (
     <div>
@@ -146,6 +162,12 @@ export default async function TripsBoardPage() {
                               {capacity > 0 ? ` / ${capacity}` : ""} seats
                               {isFull ? " · Full" : ""}
                             </p>
+                            {c.filled > 0 && (
+                              <p>
+                                Waivers {c.waiversSigned}/{c.filled} · Rooms{" "}
+                                {c.roomsAssigned}/{c.filled}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       </Link>

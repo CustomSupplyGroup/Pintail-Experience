@@ -6,7 +6,8 @@ import { InquiryForm } from "./inquiry-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VideoBackground } from "@/components/video-background";
-import { stock } from "@/lib/stock";
+import { stock, type StockKey } from "@/lib/stock";
+import { fmtRange } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "The Pintail Experience — For the inspired sportsman",
@@ -20,19 +21,21 @@ export const metadata: Metadata = {
   },
 };
 
-function fmtRange(start: string | null, end: string | null): string {
-  if (!start) return "Dates to come";
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const s = new Date(`${start}T00:00:00`).toLocaleDateString("en-US", opts);
-  const e = end
-    ? new Date(`${end}T00:00:00`).toLocaleDateString("en-US", {
-        ...opts,
-        year: "numeric",
-      })
-    : new Date(`${start}T00:00:00`).toLocaleDateString("en-US", {
-        year: "numeric",
-      });
-  return `${s} – ${e}`;
+// Slug → scenic photo for the hunt cards (no schema change; map by slug).
+// Unknown slugs rotate through the scenic set so a grid never repeats one shot;
+// the rotation leads with marsh-dawn, the intended fallback.
+const HUNT_IMAGE: Record<string, StockKey> = {};
+const HUNT_IMAGE_ROTATION: StockKey[] = [
+  "marshDawn",
+  "lodgeFire",
+  "decoySpread",
+  "boatHunter",
+];
+function huntImage(slug: string, index: number): string {
+  const key =
+    HUNT_IMAGE[slug] ??
+    HUNT_IMAGE_ROTATION[index % HUNT_IMAGE_ROTATION.length];
+  return stock(key);
 }
 
 export default async function LandingPage() {
@@ -72,6 +75,7 @@ export default async function LandingPage() {
           <VideoBackground
             src="/video/hero-1.mp4"
             poster={stock("marshDawn")}
+            className="animate-drift"
           />
         </div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-pintail-night/85 via-pintail-night/70 to-pintail-night" />
@@ -79,16 +83,8 @@ export default async function LandingPage() {
           <p className="mb-4 text-xs uppercase tracking-[0.3em] text-primary">
             For the inspired sportsman
           </p>
-          <h1>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/wordmark.png"
-              alt="The Pintail Experience"
-              className="mx-auto h-24 w-auto sm:h-32"
-            />
-            <span className="mt-3 block text-sm uppercase tracking-[0.4em] text-pintail-champagne/80">
-              The Experience
-            </span>
+          <h1 className="font-display text-6xl leading-none text-pintail-cream sm:text-7xl">
+            The Pintail Experience
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-balance text-lg text-muted-foreground">
             Hunts built with intention — reverence for the field, craftsmanship
@@ -127,22 +123,29 @@ export default async function LandingPage() {
             </p>
           ) : (
             <ul className="mt-10 grid gap-4 sm:grid-cols-2">
-              {hunts.map((t) => {
+              {hunts.map((t, i) => {
                 const seats = seatsLabel(t.capacity, counts.get(t.id) ?? 0);
                 return (
                   <li key={t.id}>
                     <Link href={`/experiences/${t.slug}`}>
-                      <Card className="h-full transition-colors hover:border-primary">
-                        <CardContent className="space-y-2 pt-6">
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="font-display text-3xl text-pintail-cream">
+                      <Card className="h-full overflow-hidden transition-colors hover:border-primary">
+                        <div className="relative aspect-video w-full overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={huntImage(t.slug, i)}
+                            alt={t.name}
+                            className="size-full object-cover"
+                          />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-pintail-night via-pintail-night/40 to-transparent" />
+                          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+                            <p className="font-display text-3xl leading-none text-pintail-cream">
                               {t.name}
                             </p>
                             {seats && (
                               <span
                                 className={
                                   seats === "Full"
-                                    ? "shrink-0 text-xs uppercase tracking-wide text-muted-foreground"
+                                    ? "shrink-0 text-xs uppercase tracking-wide text-pintail-cream/70"
                                     : "shrink-0 text-xs uppercase tracking-wide text-primary"
                                 }
                               >
@@ -150,6 +153,8 @@ export default async function LandingPage() {
                               </span>
                             )}
                           </div>
+                        </div>
+                        <CardContent className="space-y-2 pt-4">
                           {t.tagline && (
                             <p className="text-sm text-foreground/85">
                               {t.tagline}

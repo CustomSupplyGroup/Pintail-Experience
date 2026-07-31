@@ -23,7 +23,13 @@ export function ClientBottomNav() {
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
-            <li key={href} className="flex-1">
+            <li key={href} className="relative flex-1">
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-0.5 bg-primary"
+                />
+              )}
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}

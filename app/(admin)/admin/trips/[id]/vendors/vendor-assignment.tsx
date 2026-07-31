@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   assignVendor,
@@ -73,6 +73,8 @@ function VendorRow({
   vendor: AssignableVendor;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  // Controlled so a declined unassign confirm leaves the box visually checked.
+  const [checked, setChecked] = useState(vendor.assigned);
   const action = vendor.assigned ? unassignVendor : assignVendor;
 
   return (
@@ -82,8 +84,19 @@ function VendorRow({
         <input type="hidden" name="vendor_id" value={vendor.id} />
         <label className="flex cursor-pointer items-center gap-3 text-sm">
           <Checkbox
-            defaultChecked={vendor.assigned}
-            onCheckedChange={() => formRef.current?.requestSubmit()}
+            checked={checked}
+            onCheckedChange={(next) => {
+              // Unassigning is the destructive path — confirm before removing.
+              if (
+                vendor.assigned &&
+                next === false &&
+                !window.confirm(`Remove ${vendor.name} from this trip?`)
+              ) {
+                return;
+              }
+              setChecked(next === true);
+              formRef.current?.requestSubmit();
+            }}
           />
           <span className="flex-1 font-medium">{vendor.name}</span>
           <Badge variant="secondary">{vendor.role.replace(/_/g, " ")}</Badge>

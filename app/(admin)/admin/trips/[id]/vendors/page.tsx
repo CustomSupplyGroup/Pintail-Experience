@@ -40,15 +40,7 @@ export default async function TripVendorsPage({
     console.error("trip vendors: vendors read failed", vendorsError.message);
     return (
       <div>
-        <Link
-          href={`/admin/trips/${id}?tab=manage`}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Back to Manage
-        </Link>
-        <div className="mt-2">
-          <PageHeader title="Vendors" />
-        </div>
+        <PageHeader title="Vendors" />
         <EmptyState>Couldn&apos;t load vendors: {vendorsError.message}</EmptyState>
       </div>
     );
@@ -77,13 +69,7 @@ export default async function TripVendorsPage({
 
   return (
     <div>
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
-      <div className="mt-2 flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-4">
         <PageHeader
           title="Vendors"
           subtitle={`Assign vendors to ${trip.name}. Toggle to add or remove.`}

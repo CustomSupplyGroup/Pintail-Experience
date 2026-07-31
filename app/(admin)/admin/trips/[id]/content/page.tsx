@@ -40,15 +40,7 @@ export default async function TripContentPage({
     console.error("trip content: series read failed", seriesError.message);
     return (
       <div>
-        <Link
-          href={`/admin/trips/${id}?tab=manage`}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Back to Manage
-        </Link>
-        <div className="mt-2">
-          <PageHeader title="Content" />
-        </div>
+        <PageHeader title="Content" />
         <EmptyState>Couldn&apos;t load content: {seriesError.message}</EmptyState>
       </div>
     );
@@ -74,13 +66,7 @@ export default async function TripContentPage({
 
   return (
     <div>
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
-      <div className="mt-2 flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-4">
         <PageHeader
           title="Content"
           subtitle={`Assign devotional & curriculum series to ${trip.name}.`}

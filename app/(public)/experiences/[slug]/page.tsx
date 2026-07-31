@@ -7,19 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
 import { stock } from "@/lib/stock";
-
-function fmtRange(start: string | null, end: string | null): string {
-  if (!start) return "Dates to come";
-  const opts: Intl.DateTimeFormatOptions = { month: "long", day: "numeric" };
-  const s = new Date(`${start}T00:00:00`).toLocaleDateString("en-US", opts);
-  const e = end
-    ? new Date(`${end}T00:00:00`).toLocaleDateString("en-US", {
-        ...opts,
-        year: "numeric",
-      })
-    : "";
-  return e ? `${s} – ${e}` : s;
-}
+import { fmtRange } from "@/lib/dates";
 
 const ROLE_FALLBACK: Record<string, Parameters<typeof stock>[0]> = {
   lodge: "decoySpread",

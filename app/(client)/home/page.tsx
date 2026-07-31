@@ -3,10 +3,26 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSelectedTrip } from "@/lib/trip";
 import { getLatestDevotional } from "@/lib/content";
-import { daysUntilDate, formatCents } from "@/lib/utils";
+import { daysUntil, currentTripDay, isTripOver } from "@/lib/dates";
+import { formatCents } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { VideoBackground } from "@/components/video-background";
+import {
+  ReadinessChecklist,
+  type ReadinessRow,
+} from "@/components/readiness-checklist";
+
+function fmtTime(t: string | null): string {
+  if (!t) return "";
+  const [h, m] = t.split(":");
+  const hour = Number(h);
+  const ampm = hour >= 12 ? "pm" : "am";
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m}${ampm}`;
+}
+
+type NextItem = { start_time: string | null; title: string; location: string | null };
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -17,11 +33,11 @@ export default async function HomePage() {
     console.error("home: selected trip lookup failed", tripError);
   }
 
-  // Signed-in attendees get enrolled + a profile-completeness check.
-  // Guests (preview) skip all of this.
+  // Signed-in attendees get enrolled + a readiness check. Guests skip this.
   let attendee: {
     shirt_size: string | null;
     amount_paid_cents: number;
+    waiver_signed_at: string | null;
   } | null = null;
   if (user) {
     const { data: tripId, error: enrollError } = await supabase.rpc(
@@ -32,7 +48,7 @@ export default async function HomePage() {
     } else if (tripId) {
       const { data, error: attendeeError } = await supabase
         .from("trip_attendees")
-        .select("shirt_size, amount_paid_cents")
+        .select("shirt_size, amount_paid_cents, waiver_signed_at")
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -43,7 +59,7 @@ export default async function HomePage() {
     }
   }
 
-  // Payment standing for the selected trip (only when a price is set).
+  // Payment standing (only when a price is set).
   const priceCents = trip?.price_cents ?? null;
   const paidCents = attendee?.amount_paid_cents ?? 0;
   const balanceCents =
@@ -55,9 +71,60 @@ export default async function HomePage() {
     : { devotional: null, error: null };
   const latestDevotional = latest.devotional;
 
-  const profileIncomplete =
-    Boolean(user) && (!user?.full_name || !attendee?.shirt_size);
-  const countdown = trip?.start_date ? daysUntilDate(trip.start_date) : null;
+  // Trip-day mode: is today one of the hunt days?
+  const tripDay = trip ? currentTripDay(trip.start_date, trip.end_date) : null;
+  const tripOver = trip ? isTripOver(trip.end_date) : false;
+  const countdown = trip?.start_date ? daysUntil(trip.start_date) : null;
+
+  // On a live day, find the next thing on the agenda.
+  let nextItem: NextItem | null = null;
+  if (trip && tripDay != null) {
+    const now = new Date();
+    const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
+    const { data: items, error: itemsError } = await supabase
+      .from("schedule_items")
+      .select("start_time, title, location, day_number")
+      .eq("trip_id", trip.id)
+      .eq("visible_to_attendees", true)
+      .gte("day_number", tripDay)
+      .order("day_number", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: true });
+    if (itemsError) {
+      console.error("home: schedule lookup failed", itemsError.message);
+    }
+    const list = items ?? [];
+    nextItem =
+      list.find(
+        (it) =>
+          it.day_number > tripDay ||
+          (it.start_time != null && it.start_time >= nowStr),
+      ) ??
+      list[0] ??
+      null;
+  }
+
+  // Readiness rows (signed-in members only).
+  const readinessRows: ReadinessRow[] = user
+    ? [
+        {
+          label: "Complete your profile",
+          done: Boolean(user.full_name) && Boolean(attendee?.shirt_size),
+          href: "/onboarding",
+        },
+        {
+          label: "Sign the waiver",
+          done: Boolean(attendee?.waiver_signed_at),
+          href: "/waiver",
+        },
+        {
+          label: "Pay your balance",
+          done: priceCents == null || paidCents >= priceCents,
+          href: "/more",
+        },
+      ]
+    : [];
+  const showReadiness = readinessRows.some((r) => !r.done);
+
   const firstName = user?.full_name?.split(" ")[0];
 
   return (
@@ -69,24 +136,7 @@ export default async function HomePage() {
         </h1>
       </header>
 
-      {profileIncomplete && (
-        <Card className="border-primary/40">
-          <CardHeader>
-            <CardTitle className="font-serif text-lg">
-              Finish setting up your profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Add your sizes, dietary needs, and a short bio so we can take care
-              of you — and introduce you to the other men.
-            </p>
-            <Link href="/onboarding" className={buttonVariants({})}>
-              Complete profile
-            </Link>
-          </CardContent>
-        </Card>
-      )}
+      {showReadiness && <ReadinessChecklist rows={readinessRows} />}
 
       <Link
         href="/trip"
@@ -95,26 +145,61 @@ export default async function HomePage() {
         <VideoBackground src="/video/hero-1.mp4" poster="/img/hero-1-poster.jpg" />
         <div className="absolute inset-0 bg-gradient-to-t from-pintail-night via-pintail-night/70 to-pintail-night/30" />
         <div className="relative p-5 pt-16">
-          <p className="font-serif text-lg text-pintail-cream">
-            {trip?.name ?? "The Pintail Experience"}
-          </p>
-          {countdown !== null ? (
-            <p className="font-serif text-5xl text-primary">
-              {countdown}
-              <span className="ml-2 text-base text-pintail-cream/80">
-                {countdown === 1 ? "day to go" : "days to go"}
-              </span>
-            </p>
+          {tripDay != null ? (
+            // Trip is happening now — show "where to be, when."
+            <>
+              <p className="font-serif text-lg text-pintail-cream">
+                {trip?.name} · Day {tripDay}
+              </p>
+              {nextItem ? (
+                <p className="mt-1">
+                  <span className="font-serif text-3xl text-primary">
+                    {fmtTime(nextItem.start_time) || "Next"}
+                  </span>
+                  <span className="ml-2 text-pintail-cream">{nextItem.title}</span>
+                  {nextItem.location && (
+                    <span className="mt-0.5 block text-sm text-pintail-cream/70">
+                      {nextItem.location}
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="mt-1 text-pintail-cream/80">
+                  Rest up — the next call comes soon.
+                </p>
+              )}
+            </>
+          ) : tripOver ? (
+            <>
+              <p className="font-serif text-lg text-pintail-cream">{trip?.name}</p>
+              <p className="mt-1 font-display text-3xl text-primary">
+                The hunt is over. The experience isn&apos;t.
+              </p>
+            </>
           ) : (
-            <p className="text-pintail-cream/80">
-              Your trip details are coming soon.
-            </p>
-          )}
-          {trip?.location && (
-            <p className="text-sm text-pintail-cream/70">{trip.location}</p>
+            <>
+              <p className="font-serif text-lg text-pintail-cream">
+                {trip?.name ?? "The Pintail Experience"}
+              </p>
+              {countdown !== null ? (
+                <p className="font-serif text-5xl text-primary">
+                  {countdown}
+                  <span className="ml-2 text-base text-pintail-cream/80">
+                    {countdown === 1 ? "day to go" : "days to go"}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-pintail-cream/80">
+                  Your trip details are coming soon.
+                </p>
+              )}
+              {trip?.location && (
+                <p className="text-sm text-pintail-cream/70">{trip.location}</p>
+              )}
+            </>
           )}
           <p className="mt-3 text-xs uppercase tracking-wide text-primary/80 transition-colors group-hover:text-primary">
-            Tap for trip info →
+            {tripOver ? "See the photos →" : "Tap for trip info →"}
           </p>
         </div>
       </Link>

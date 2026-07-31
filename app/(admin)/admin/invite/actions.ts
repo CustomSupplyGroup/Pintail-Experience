@@ -50,11 +50,30 @@ export async function inviteAttendees(
     return { ok: false, message: "Add at least one email address." };
   }
 
-  // Find the active experience to enroll invitees into.
+  // Enroll invitees into a specific trip when one is passed (from the roster's
+  // "Invite attendees" button); otherwise fall back to the active experience.
   const supabase = await createClient();
-  const { trip, error: tripError } = await getActiveExperience(supabase);
-  if (tripError) {
-    return { ok: false, message: "Couldn't look up the trip. Try again." };
+  const tripParam = String(formData.get("trip") ?? "").trim();
+  let tripId: string | null = null;
+  if (tripParam) {
+    const { data: tripRow, error: tripLookupError } = await supabase
+      .from("trips")
+      .select("id")
+      .eq("id", tripParam)
+      .maybeSingle();
+    if (tripLookupError) {
+      return { ok: false, message: "Couldn't look up the trip. Try again." };
+    }
+    if (!tripRow) {
+      return { ok: false, message: "That trip no longer exists." };
+    }
+    tripId = tripRow.id;
+  } else {
+    const { trip, error: tripError } = await getActiveExperience(supabase);
+    if (tripError) {
+      return { ok: false, message: "Couldn't look up the trip. Try again." };
+    }
+    tripId = trip?.id ?? null;
   }
 
   const admin = createAdminClient();
@@ -77,11 +96,11 @@ export async function inviteAttendees(
     }
     invited += 1;
 
-    // Enroll the new user into the live trip (service role bypasses RLS).
-    if (trip && data.user) {
+    // Enroll the new user into the target trip (service role bypasses RLS).
+    if (tripId && data.user) {
       const { error: enrollErr } = await admin
         .from("trip_attendees")
-        .insert({ trip_id: trip.id, user_id: data.user.id });
+        .insert({ trip_id: tripId, user_id: data.user.id });
       if (enrollErr && !enrollErr.message.includes("duplicate")) {
         console.error("enroll on invite failed:", enrollErr.message);
       }
@@ -99,6 +118,7 @@ export async function inviteAttendees(
   }
 
   revalidatePath("/admin/trips");
+  if (tripId) revalidatePath(`/admin/trips/${tripId}/roster`);
 
   if (invited === 0) {
     return { ok: false, message: `No invites sent. ${failures.join("; ")}` };

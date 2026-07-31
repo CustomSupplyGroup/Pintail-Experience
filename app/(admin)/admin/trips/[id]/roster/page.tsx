@@ -2,28 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { formatCents } from "@/lib/utils";
-
-type PaymentStatus = "unpaid" | "deposit" | "paid_in_full" | "refunded";
-
-const PAYMENT_LABEL: Record<PaymentStatus, string> = {
-  unpaid: "Unpaid",
-  deposit: "Deposit",
-  paid_in_full: "Paid",
-  refunded: "Refunded",
-};
-
-const PAYMENT_VARIANT: Record<
-  PaymentStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  unpaid: "destructive",
-  deposit: "outline",
-  paid_in_full: "default",
-  refunded: "secondary",
-};
+import { RosterFilters, type PaymentStatus, type RosterRow } from "./roster-filters";
 
 export default async function RosterPage({
   params,
@@ -61,21 +41,13 @@ export default async function RosterPage({
     console.error("roster: attendees read failed", error.message);
     return (
       <div>
-        <Link
-          href={`/admin/trips/${id}?tab=manage`}
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Back to Manage
-        </Link>
-        <div className="mt-2">
-          <PageHeader title="Roster" />
-        </div>
+        <PageHeader title="Roster" />
         <EmptyState>Couldn&apos;t load the roster: {error.message}</EmptyState>
       </div>
     );
   }
 
-  const people = (rows ?? [])
+  const people: RosterRow[] = (rows ?? [])
     .map((r) => ({
       user_id: r.user_id,
       payment_status: r.payment_status as PaymentStatus,
@@ -90,19 +62,13 @@ export default async function RosterPage({
 
   return (
     <div>
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
-      <div className="mt-2 flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-4">
         <PageHeader
           title="Roster"
           subtitle={`${people.length} of ${trip.capacity ?? "—"} seats · ${trip.name}`}
         />
         <Link
-          href="/admin/invite"
+          href={`/admin/invite?trip=${id}`}
           className={buttonVariants({ className: "mb-6" })}
         >
           Invite attendees
@@ -115,88 +81,11 @@ export default async function RosterPage({
           invited.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/40 text-left text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Payment</th>
-                <th className="px-4 py-3 font-medium">Balance</th>
-                <th className="px-4 py-3 font-medium">Waiver</th>
-                <th className="px-4 py-3 font-medium">Dietary</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((p) => (
-                <tr
-                  key={p.user_id}
-                  className="border-b border-border last:border-0 hover:bg-accent/40"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/trips/${id}/roster/${p.user_id}`}
-                      className="font-medium hover:text-primary"
-                    >
-                      {p.full_name ?? "—"}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.email}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={PAYMENT_VARIANT[p.payment_status]}>
-                      {PAYMENT_LABEL[p.payment_status]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {trip.price_cents == null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      (() => {
-                        const bal = Math.max(
-                          trip.price_cents - p.amount_paid_cents,
-                          0,
-                        );
-                        return (
-                          <span className={bal === 0 ? "text-primary" : "text-amber-400"}>
-                            {formatCents(p.amount_paid_cents)}
-                            <span className="text-muted-foreground">
-                              {" "}/ {formatCents(trip.price_cents)}
-                            </span>
-                            {bal > 0 && (
-                              <span className="block text-xs text-muted-foreground">
-                                {formatCents(bal)} due
-                              </span>
-                            )}
-                          </span>
-                        );
-                      })()
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {p.waiver_signed ? (
-                      <Badge variant="default">Signed</Badge>
-                    ) : (
-                      <Badge variant="destructive">Not signed</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {p.dietary ? (
-                      <span
-                        className="text-amber-400"
-                        title={p.dietary}
-                        aria-label={`Dietary note: ${p.dietary}`}
-                      >
-                        ● {p.dietary.length > 24 ? `${p.dietary.slice(0, 24)}…` : p.dietary}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RosterFilters
+          tripId={id}
+          rows={people}
+          priceCents={trip.price_cents}
+        />
       )}
     </div>
   );

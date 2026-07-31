@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { emailConfigured } from "@/lib/email";
@@ -31,13 +30,7 @@ export default async function BroadcastPage({
 
   return (
     <div className="mx-auto max-w-xl">
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
-      <div className="mt-2">
+      <div>
         <PageHeader
           title="Send a broadcast"
           subtitle={`Posts an in-app announcement to everyone on ${trip.name}, with an option to also email them.`}

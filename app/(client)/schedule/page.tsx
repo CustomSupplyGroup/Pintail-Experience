@@ -1,26 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSelectedTrip } from "@/lib/trip";
+import { currentTripDay } from "@/lib/dates";
 import { PageHeader, EmptyState } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
-
-function fmt(t: string | null): string {
-  if (!t) return "";
-  const [h, m] = t.split(":");
-  const hour = Number(h);
-  const ampm = hour >= 12 ? "pm" : "am";
-  const h12 = hour % 12 || 12;
-  return `${h12}:${m}${ampm}`;
-}
-
-const CATEGORY_TONE: Record<string, string> = {
-  hunt: "text-primary",
-  teaching: "text-primary",
-  meal: "text-muted-foreground",
-  rest: "text-muted-foreground",
-  travel: "text-muted-foreground",
-  special: "text-primary",
-};
+import {
+  ScheduleView,
+  type ScheduleDay,
+  type ScheduleItem,
+} from "./schedule-view";
 
 export default async function SchedulePage() {
   const supabase = await createClient();
@@ -44,54 +31,37 @@ export default async function SchedulePage() {
     .order("day_number", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: true });
 
-  const byDay = new Map<number, typeof items>();
+  const byDay = new Map<number, ScheduleItem[]>();
   for (const it of items ?? []) {
     if (!byDay.has(it.day_number)) byDay.set(it.day_number, []);
-    byDay.get(it.day_number)!.push(it);
+    byDay.get(it.day_number)!.push({
+      id: it.id,
+      start_time: it.start_time,
+      title: it.title,
+      description: it.description,
+      location: it.location,
+      category: it.category,
+    });
   }
+  const days: ScheduleDay[] = [...byDay.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([day, dayItems]) => ({ day, items: dayItems }));
+
+  const currentDay = currentTripDay(trip.start_date, trip.end_date);
 
   return (
     <div>
       <PageHeader title="Schedule" subtitle="The run-of-show, day by day." />
       {error ? (
         <EmptyState>Couldn&apos;t load the schedule right now.</EmptyState>
-      ) : !items || items.length === 0 ? (
+      ) : days.length === 0 ? (
         <EmptyState>The schedule will be published before the trip.</EmptyState>
       ) : (
-        <div className="space-y-8">
-          {[...byDay.entries()].map(([day, dayItems]) => (
-            <section key={day}>
-              <h2 className="mb-3 font-serif text-2xl text-primary">Day {day}</h2>
-              <ul className="space-y-4">
-                {dayItems!.map((it) => (
-                  <li key={it.id} className="flex gap-4">
-                    <span className="w-16 shrink-0 pt-0.5 text-sm tabular-nums text-muted-foreground">
-                      {fmt(it.start_time)}
-                    </span>
-                    <div className="border-l border-border pl-4">
-                      <div className="flex items-center gap-2">
-                        <p className="font-serif text-lg leading-tight">
-                          {it.title}
-                        </p>
-                        <Badge variant="secondary" className={CATEGORY_TONE[it.category]}>
-                          {it.category}
-                        </Badge>
-                      </div>
-                      {it.location && (
-                        <p className="text-sm text-muted-foreground">{it.location}</p>
-                      )}
-                      {it.description && (
-                        <p className="mt-1 text-sm text-foreground/80">
-                          {it.description}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+        <ScheduleView
+          days={days}
+          currentDay={currentDay}
+          isLive={trip.status === "live"}
+        />
       )}
     </div>
   );

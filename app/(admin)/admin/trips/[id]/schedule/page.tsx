@@ -53,13 +53,7 @@ export default async function ScheduleAdminPage({
 
   return (
     <div>
-      <Link
-        href={`/admin/trips/${id}?tab=manage`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Back to Manage
-      </Link>
-      <div className="mt-2 flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-4">
         <PageHeader title="Schedule" subtitle="The run-of-show, by day." />
         <Link
           href={`/admin/trips/${id}/schedule/new`}
