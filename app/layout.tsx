@@ -32,10 +32,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Pintail",
   },
-  icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/apple-touch-icon.png",
-  },
+  // Icons come from Next file conventions: app/icon.png (favicon + manifest
+  // fallback) and app/apple-icon.png (iOS "Add to Home Screen"). The manifest
+  // additionally declares the 192/512/maskable PWA icons.
 };
 
 export const viewport: Viewport = {
