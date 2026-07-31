@@ -61,10 +61,10 @@ export default async function RosterPage({
     return (
       <div>
         <Link
-          href={`/admin/trips/${id}`}
+          href={`/admin/trips/${id}?tab=manage`}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Back to trip
+          ← Back to Manage
         </Link>
         <div className="mt-2">
           <PageHeader title="Roster" />
@@ -89,10 +89,10 @@ export default async function RosterPage({
   return (
     <div>
       <Link
-        href={`/admin/trips/${id}`}
+        href={`/admin/trips/${id}?tab=manage`}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Back to trip
+        ← Back to Manage
       </Link>
       <div className="mt-2 flex items-end justify-between gap-4">
         <PageHeader

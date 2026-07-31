@@ -32,10 +32,10 @@ export default async function BroadcastPage({
   return (
     <div className="mx-auto max-w-xl">
       <Link
-        href={`/admin/trips/${id}`}
+        href={`/admin/trips/${id}?tab=manage`}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Back to trip
+        ← Back to Manage
       </Link>
       <div className="mt-2">
         <PageHeader

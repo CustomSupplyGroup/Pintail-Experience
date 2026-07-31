@@ -41,10 +41,10 @@ export default async function PhotosAdminPage({
   return (
     <div className="space-y-6">
       <Link
-        href={`/admin/trips/${id}`}
+        href={`/admin/trips/${id}?tab=manage`}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
-        ← Back to trip
+        ← Back to Manage
       </Link>
       <PageHeader
         title="Photos"
