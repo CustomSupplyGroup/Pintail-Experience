@@ -1,46 +1,45 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { getActiveExperience } from "@/lib/trip";
+import { daysUntilDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { stock } from "@/lib/stock";
 import { VideoBackground } from "@/components/video-background";
-
-function daysUntil(date: string | null): number | null {
-  if (!date) return null;
-  const ms = new Date(date).getTime() - Date.now();
-  return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
-}
 
 export default async function HomePage() {
   const supabase = await createClient();
   const user = await getCurrentUser();
 
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("name, start_date, location")
-    .neq("status", "draft")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { trip, error: tripError } = await getActiveExperience(supabase);
+  if (tripError) {
+    console.error("home: active trip lookup failed", tripError);
+  }
 
   // Signed-in attendees get enrolled + a profile-completeness check.
   // Guests (preview) skip all of this.
   let attendee: { shirt_size: string | null } | null = null;
   if (user) {
-    const { data: tripId } = await supabase.rpc("ensure_trip_enrollment");
-    if (tripId) {
-      const { data } = await supabase
+    const { data: tripId, error: enrollError } = await supabase.rpc(
+      "ensure_trip_enrollment",
+    );
+    if (enrollError) {
+      console.error("home: ensure_trip_enrollment failed", enrollError.message);
+    } else if (tripId) {
+      const { data, error: attendeeError } = await supabase
         .from("trip_attendees")
         .select("shirt_size")
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
         .maybeSingle();
+      if (attendeeError) {
+        console.error("home: attendee read failed", attendeeError.message);
+      }
       attendee = data;
     }
   }
 
-  const { data: latestDevotional } = await supabase
+  const { data: latestDevotional, error: devotionalError } = await supabase
     .from("devotionals")
     .select("id, title, scripture")
     .not("scheduled_for", "is", null)
@@ -48,9 +47,12 @@ export default async function HomePage() {
     .order("scheduled_for", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (devotionalError) {
+    console.error("home: latest devotional read failed", devotionalError.message);
+  }
 
   const profileIncomplete = Boolean(user) && (!user?.full_name || !attendee?.shirt_size);
-  const countdown = daysUntil(trip?.start_date ?? null);
+  const countdown = trip?.start_date ? daysUntilDate(trip.start_date) : null;
   const firstName = user?.full_name?.split(" ")[0];
 
   return (

@@ -5,13 +5,14 @@ import { ScheduleForm } from "../schedule-form";
 
 export default async function NewScheduleItemPage() {
   const supabase = await createClient();
-  const { data: trip } = await supabase
+  const { data: trip, error } = await supabase
     .from("trips")
     .select("id")
     .neq("status", "draft")
     .order("start_date", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (error) console.error("new schedule item: trip read failed", error.message);
 
   return (
     <div className="mx-auto max-w-2xl">

@@ -5,12 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/markdown";
 import { VideoBackground } from "@/components/video-background";
 import { stock } from "@/lib/stock";
-
-function daysUntil(date: string | null): number | null {
-  if (!date) return null;
-  const ms = new Date(date).getTime() - Date.now();
-  return ms <= 0 ? 0 : Math.ceil(ms / 86_400_000);
-}
+import { getActiveExperience } from "@/lib/trip";
+import { daysUntilDate } from "@/lib/utils";
 
 function fmtDate(d: string | null): string {
   if (!d) return "";
@@ -51,16 +47,16 @@ const ROLE_FALLBACK: Record<string, Parameters<typeof stock>[0]> = {
 export default async function TripOnePager() {
   const supabase = await createClient();
 
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("name, start_date, end_date, location")
-    .neq("status", "draft")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { trip, error: tripError } = await getActiveExperience(supabase);
+  if (tripError) {
+    console.error("trip page: active trip lookup failed", tripError);
+  }
 
-  const [{ data: pages }, { data: vendors }, { data: schedule }] =
-    await Promise.all([
+  const [
+    { data: pages, error: pagesError },
+    { data: vendors, error: vendorsError },
+    { data: schedule, error: scheduleError },
+  ] = await Promise.all([
       supabase
         .from("trip_pages")
         .select("slug, title, content")
@@ -78,9 +74,13 @@ export default async function TripOnePager() {
         .order("start_time", { ascending: true, nullsFirst: true }),
     ]);
 
+  if (pagesError) console.error("trip page: pages read failed", pagesError.message);
+  if (vendorsError) console.error("trip page: vendors read failed", vendorsError.message);
+  if (scheduleError) console.error("trip page: schedule read failed", scheduleError.message);
+
   const vision = pages?.find((p) => p.slug === "vision");
   const included = pages?.find((p) => p.slug === "whats-included");
-  const countdown = daysUntil(trip?.start_date ?? null);
+  const countdown = trip?.start_date ? daysUntilDate(trip.start_date) : null;
 
   const byDay = new Map<number, NonNullable<typeof schedule>>();
   for (const it of schedule ?? []) {

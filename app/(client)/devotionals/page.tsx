@@ -7,7 +7,7 @@ export default async function DevotionalsPage() {
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
 
-  const { data: devotionals } = await supabase
+  const { data: devotionals, error } = await supabase
     .from("devotionals")
     .select("id, title, scripture, scheduled_for, audio_mux_id")
     .not("scheduled_for", "is", null)
@@ -20,7 +20,9 @@ export default async function DevotionalsPage() {
         title="Devotionals"
         subtitle="A short word for the road to the trip."
       />
-      {!devotionals || devotionals.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load devotionals right now.</EmptyState>
+      ) : !devotionals || devotionals.length === 0 ? (
         <EmptyState>
           The first devotional will arrive soon. Watch for it.
         </EmptyState>

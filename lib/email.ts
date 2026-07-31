@@ -71,6 +71,23 @@ export function welcomeEmailHtml(opts: {
     </p>`);
 }
 
+export function inquiryNotificationHtml(opts: {
+  name: string;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+}): string {
+  const row = (label: string, value: string) =>
+    `<p style="font-size:15px;line-height:1.5;color:#eee7e0;margin:0 0 10px;">
+       <span style="color:#e5c188;font-family:Arial,sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${label}</span><br/>${value}</p>`;
+  return shell(`
+    <h1 style="color:#eee7e0;font-size:24px;margin:0 0 20px;">New inquiry</h1>
+    ${row("Name", opts.name)}
+    ${row("Email", `<a href="mailto:${opts.email}" style="color:#e5c188;">${opts.email}</a>`)}
+    ${opts.phone ? row("Phone", opts.phone) : ""}
+    ${opts.message ? row("Message", opts.message.replace(/\n/g, "<br/>")) : ""}`);
+}
+
 export function broadcastEmailHtml(opts: {
   title: string;
   body: string;

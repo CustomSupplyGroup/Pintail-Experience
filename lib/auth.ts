@@ -31,6 +31,25 @@ export function isStaff(role: UserRole | undefined | null): boolean {
   return role ? STAFF_ROLES.includes(role) : false;
 }
 
+/**
+ * Throws "Forbidden" unless the caller is signed in AND staff. Call this as the
+ * first line of every admin mutation server action — several of them use the
+ * service-role client (which bypasses RLS), so the app layer is the only gate.
+ */
+export async function requireStaff(): Promise<AppUser> {
+  const user = await getCurrentUser();
+  if (!user || !isStaff(user.role)) {
+    throw new Error("Forbidden: staff access required");
+  }
+  return user;
+}
+
+/** The friendly error state to return from a staff-gated action on Forbidden. */
+export const FORBIDDEN_STATE = {
+  ok: false as const,
+  message: "You don't have access to do that.",
+};
+
 /** Where a user lands after authenticating, based on their role. */
 export function homePathForRole(role: UserRole | undefined | null): string {
   return isStaff(role) ? "/admin" : "/home";

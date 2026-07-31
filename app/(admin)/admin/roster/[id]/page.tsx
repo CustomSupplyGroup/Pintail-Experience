@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader, EmptyState } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttendeeEditForm } from "./attendee-edit-form";
 
@@ -19,20 +19,37 @@ export default async function AttendeeDetailPage({
     .eq("id", id)
     .maybeSingle();
 
-  if (error) console.error("attendee fetch failed:", error.message);
+  if (error) {
+    console.error("attendee fetch failed:", error.message);
+    return (
+      <div>
+        <Link
+          href="/admin/roster"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back to roster
+        </Link>
+        <div className="mt-2">
+          <PageHeader title="Attendee" />
+        </div>
+        <EmptyState>Couldn&apos;t load this attendee: {error.message}</EmptyState>
+      </div>
+    );
+  }
   if (!person) notFound();
 
-  const { data: trip } = await supabase
+  const { data: trip, error: tripError } = await supabase
     .from("trips")
     .select("id, name")
     .neq("status", "draft")
     .order("start_date", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (tripError) console.error("attendee: trip read failed", tripError.message);
 
   let attendee = null;
   if (trip) {
-    const { data } = await supabase
+    const { data, error: attendeeError } = await supabase
       .from("trip_attendees")
       .select(
         "payment_status, room_assignment, waiver_signed_at, shirt_size, jacket_size, hat_size, glove_size, boot_size, dietary_notes, prayer_request",
@@ -40,6 +57,9 @@ export default async function AttendeeDetailPage({
       .eq("trip_id", trip.id)
       .eq("user_id", id)
       .maybeSingle();
+    if (attendeeError) {
+      console.error("attendee: trip_attendees read failed", attendeeError.message);
+    }
     attendee = data;
   }
 

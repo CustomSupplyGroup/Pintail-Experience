@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 
 type Role = Database["public"]["Enums"]["user_role"];
@@ -13,6 +14,12 @@ export async function updateAttendee(
   _prev: AttendeeState,
   formData: FormData,
 ): Promise<AttendeeState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const userId = String(formData.get("user_id") ?? "");
   const tripId = String(formData.get("trip_id") ?? "");
@@ -33,18 +40,23 @@ export async function updateAttendee(
 
   if (tripId) {
     const waiverSigned = formData.get("waiver_signed") === "on";
+    // Upsert, not update: an attendee may not yet have an enrollment row. A bare
+    // UPDATE would no-op silently and still report success, losing the edit.
     const { error: attendeeError } = await supabase
       .from("trip_attendees")
-      .update({
-        payment_status: String(
-          formData.get("payment_status") ?? "unpaid",
-        ) as PaymentStatus,
-        room_assignment:
-          String(formData.get("room_assignment") ?? "").trim() || null,
-        waiver_signed_at: waiverSigned ? new Date().toISOString() : null,
-      })
-      .eq("trip_id", tripId)
-      .eq("user_id", userId);
+      .upsert(
+        {
+          trip_id: tripId,
+          user_id: userId,
+          payment_status: String(
+            formData.get("payment_status") ?? "unpaid",
+          ) as PaymentStatus,
+          room_assignment:
+            String(formData.get("room_assignment") ?? "").trim() || null,
+          waiver_signed_at: waiverSigned ? new Date().toISOString() : null,
+        },
+        { onConflict: "trip_id,user_id" },
+      );
 
     if (attendeeError) {
       console.error("admin attendee update failed:", attendeeError.message);

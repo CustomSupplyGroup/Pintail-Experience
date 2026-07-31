@@ -10,11 +10,12 @@ export const metadata = {
 
 export default async function PublicGalleryPage() {
   const supabase = await createClient();
-  const { data: photos } = await supabase
+  const { data: photos, error } = await supabase
     .from("photos")
     .select("id, storage_path, caption")
     .eq("public_visible", true)
     .order("created_at", { ascending: false });
+  if (error) console.error("public gallery: photos read failed", error.message);
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-12">

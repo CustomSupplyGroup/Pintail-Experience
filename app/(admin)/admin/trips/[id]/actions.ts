@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 
 type TripStatus = Database["public"]["Enums"]["trip_status"];
@@ -12,6 +13,12 @@ export async function updateTrip(
   _prev: TripState,
   formData: FormData,
 ): Promise<TripState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Missing trip id." };

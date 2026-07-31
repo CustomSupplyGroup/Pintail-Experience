@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { PageHeader, EmptyState } from "@/components/page-header";
 import { CurriculumForm } from "../curriculum-form";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { deleteCurriculum } from "../actions";
 
 export default async function EditCurriculumPage({
@@ -14,13 +14,31 @@ export default async function EditCurriculumPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: session } = await supabase
+  const { data: session, error } = await supabase
     .from("curriculum_sessions")
     .select(
       "id, session_number, title, scripture_reference, written_content, audio_mux_id, video_mux_id, discussion_questions, published_at",
     )
     .eq("id", id)
     .maybeSingle();
+
+  if (error) {
+    console.error("edit curriculum: session read failed", error.message);
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Link
+          href="/admin/curriculum"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back to curriculum
+        </Link>
+        <div className="mt-2">
+          <PageHeader title="Edit session" />
+        </div>
+        <EmptyState>Couldn&apos;t load this session: {error.message}</EmptyState>
+      </div>
+    );
+  }
 
   if (!session) notFound();
 
@@ -40,14 +58,14 @@ export default async function EditCurriculumPage({
         <PageHeader title="Edit session" />
         <form action={deleteCurriculum}>
           <input type="hidden" name="id" value={session.id} />
-          <Button
-            type="submit"
+          <ConfirmSubmitButton
             variant="ghost"
             size="sm"
             className="mt-1 text-destructive"
+            confirmText="Delete this session? This can't be undone."
           >
             Delete
-          </Button>
+          </ConfirmSubmitButton>
         </form>
       </div>
       <CurriculumForm

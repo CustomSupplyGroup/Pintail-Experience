@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/page-header";
 import { Markdown } from "@/components/markdown";
 import { AudioPlayer } from "@/components/audio-player";
 
@@ -12,13 +13,28 @@ export default async function CurriculumDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: session } = await supabase
+  const { data: session, error } = await supabase
     .from("curriculum_sessions")
     .select(
       "session_number, title, scripture_reference, written_content, audio_mux_id, discussion_questions, published_at",
     )
     .eq("id", id)
     .maybeSingle();
+
+  if (error) {
+    console.error("curriculum detail: session read failed", error.message);
+    return (
+      <article className="space-y-5">
+        <Link
+          href="/curriculum"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Curriculum
+        </Link>
+        <EmptyState>Couldn&apos;t load this session right now.</EmptyState>
+      </article>
+    );
+  }
 
   if (!session || !session.published_at) notFound();
 

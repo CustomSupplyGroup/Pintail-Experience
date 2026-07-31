@@ -12,17 +12,25 @@ export default async function OnboardingPage() {
   if (!user) redirect("/login");
 
   // Idempotent: ensures a trip_attendees row exists for the live trip.
-  const { data: tripId } = await supabase.rpc("ensure_trip_enrollment");
+  const { data: tripId, error: enrollError } = await supabase.rpc(
+    "ensure_trip_enrollment",
+  );
+  if (enrollError) {
+    console.error("onboarding: ensure_trip_enrollment failed", enrollError.message);
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("full_name, phone, bio, intro_note")
     .eq("id", user.id)
     .single();
+  if (profileError) {
+    console.error("onboarding: profile read failed", profileError.message);
+  }
 
   let attendee = null;
   if (tripId) {
-    const { data } = await supabase
+    const { data, error: attendeeError } = await supabase
       .from("trip_attendees")
       .select(
         "shirt_size, jacket_size, hat_size, glove_size, boot_size, dietary_notes, room_preference, prayer_request, roster_visible",
@@ -30,6 +38,9 @@ export default async function OnboardingPage() {
       .eq("trip_id", tripId)
       .eq("user_id", user.id)
       .maybeSingle();
+    if (attendeeError) {
+      console.error("onboarding: trip_attendees read failed", attendeeError.message);
+    }
     attendee = data;
   }
 

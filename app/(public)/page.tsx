@@ -12,13 +12,14 @@ function daysUntil(date: string | null): number | null {
 
 export default async function LandingPage() {
   const supabase = await createClient();
-  const { data: trip } = await supabase
+  const { data: trip, error } = await supabase
     .from("trips")
     .select("name, start_date, location, description")
     .neq("status", "draft")
     .order("start_date", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (error) console.error("landing: trip read failed", error.message);
 
   const countdown = daysUntil(trip?.start_date ?? null);
 

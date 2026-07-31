@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 
 type VendorRole = Database["public"]["Enums"]["vendor_role"];
@@ -25,6 +26,12 @@ export async function saveVendor(
   _prev: VendorState,
   formData: FormData,
 ): Promise<VendorState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const id = str(formData, "id");
 
@@ -72,6 +79,7 @@ export async function saveVendor(
 }
 
 export async function deleteVendor(formData: FormData): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const id = String(formData.get("id") ?? "");
   if (!id) return;

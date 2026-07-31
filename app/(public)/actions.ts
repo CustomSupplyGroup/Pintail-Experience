@@ -1,8 +1,12 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail, inquiryNotificationHtml } from "@/lib/email";
 
 export type InquiryState = { ok: boolean; message: string };
+
+const FROM_FALLBACK =
+  process.env.RESEND_FROM_EMAIL ?? "hello@thepintailexperience.com";
 
 export async function submitInquiry(
   _prev: InquiryState,
@@ -29,6 +33,22 @@ export async function submitInquiry(
   if (error) {
     console.error("submitInquiry failed:", error.message);
     return { ok: false, message: "Something went wrong. Please try again." };
+  }
+
+  // Notify the founder. Non-fatal: a missing key or send failure must not turn a
+  // saved lead into a visitor-facing error — log it and still say thanks.
+  try {
+    const to = process.env.INQUIRY_NOTIFY_TO ?? FROM_FALLBACK;
+    const result = await sendEmail({
+      to,
+      subject: `New Pintail inquiry — ${name}`,
+      html: inquiryNotificationHtml({ name, email, phone, message }),
+    });
+    if (!result.ok && !result.skipped) {
+      console.error("inquiry notification failed to send:", result.error);
+    }
+  } catch (e) {
+    console.error("inquiry notification threw:", e);
   }
 
   return {

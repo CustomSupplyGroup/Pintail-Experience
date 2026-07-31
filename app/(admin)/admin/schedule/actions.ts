@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 import type { Database } from "@/lib/database.types";
 
 type Category = Database["public"]["Enums"]["schedule_category"];
@@ -18,6 +19,12 @@ export async function saveScheduleItem(
   _prev: ScheduleState,
   formData: FormData,
 ): Promise<ScheduleState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const id = str(formData, "id");
   const tripId = str(formData, "trip_id");
@@ -66,6 +73,7 @@ export async function saveScheduleItem(
 }
 
 export async function deleteScheduleItem(formData: FormData): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const id = String(formData.get("id") ?? "");
   if (!id) return;

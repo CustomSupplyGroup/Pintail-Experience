@@ -11,11 +11,16 @@ export default async function WaiverPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: tripId } = await supabase.rpc("ensure_trip_enrollment");
+  const { data: tripId, error: enrollError } = await supabase.rpc(
+    "ensure_trip_enrollment",
+  );
+  if (enrollError) {
+    console.error("waiver: ensure_trip_enrollment failed", enrollError.message);
+  }
 
   let signedAt: string | null = null;
   if (tripId) {
-    const { data } = await supabase
+    const { data, error: waiverError } = await supabase
       .from("waivers")
       .select("signed_at")
       .eq("trip_id", tripId)
@@ -23,6 +28,9 @@ export default async function WaiverPage() {
       .order("signed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (waiverError) {
+      console.error("waiver: signed_at read failed", waiverError.message);
+    }
     signedAt = data?.signed_at ?? null;
   }
 

@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff } from "@/lib/auth";
 
 export async function setPhotoPublic(id: string, value: boolean): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const { error } = await supabase
     .from("photos")
@@ -18,6 +20,7 @@ export async function setPhotoFeatured(
   id: string,
   value: boolean,
 ): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const { error } = await supabase
     .from("photos")
@@ -31,6 +34,7 @@ export async function deletePhoto(
   id: string,
   storagePath: string,
 ): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const { error: storageError } = await supabase.storage
     .from("photos")

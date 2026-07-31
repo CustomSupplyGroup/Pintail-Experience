@@ -23,9 +23,14 @@ export function LoginForm() {
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     if (redirect) callbackUrl.searchParams.set("redirect", redirect);
 
+    // Invite-only: never auto-create an account from the login form. Accounts
+    // are provisioned by the admin invite flow; a stranger's email is a no-op.
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: callbackUrl.toString() },
+      options: {
+        emailRedirectTo: callbackUrl.toString(),
+        shouldCreateUser: false,
+      },
     });
 
     setSending(false);
@@ -43,7 +48,7 @@ export function LoginForm() {
       <div className="rounded-lg border border-border bg-card p-6 text-center">
         <p className="font-heading text-lg">Link sent</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          We sent a sign-in link to{" "}
+          If you&apos;re on the trip roster, a sign-in link is on its way to{" "}
           <span className="text-foreground">{email}</span>. Open it on this
           device to continue.
         </p>

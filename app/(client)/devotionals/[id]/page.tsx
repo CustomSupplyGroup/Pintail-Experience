@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/page-header";
 import { Markdown } from "@/components/markdown";
 import { AudioPlayer } from "@/components/audio-player";
 
@@ -12,11 +13,26 @@ export default async function DevotionalDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: devotional } = await supabase
+  const { data: devotional, error } = await supabase
     .from("devotionals")
     .select("title, scripture, written_content, audio_mux_id, scheduled_for")
     .eq("id", id)
     .maybeSingle();
+
+  if (error) {
+    console.error("devotional detail: read failed", error.message);
+    return (
+      <article className="space-y-5">
+        <Link
+          href="/devotionals"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Devotionals
+        </Link>
+        <EmptyState>Couldn&apos;t load this devotional right now.</EmptyState>
+      </article>
+    );
+  }
 
   const released =
     devotional?.scheduled_for &&

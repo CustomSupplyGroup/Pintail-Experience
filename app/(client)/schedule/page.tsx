@@ -22,7 +22,7 @@ const CATEGORY_TONE: Record<string, string> = {
 
 export default async function SchedulePage() {
   const supabase = await createClient();
-  const { data: items } = await supabase
+  const { data: items, error } = await supabase
     .from("schedule_items")
     .select("id, day_number, start_time, title, description, location, category")
     .eq("visible_to_attendees", true)
@@ -38,7 +38,9 @@ export default async function SchedulePage() {
   return (
     <div>
       <PageHeader title="Schedule" subtitle="The run-of-show, day by day." />
-      {!items || items.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load the schedule right now.</EmptyState>
+      ) : !items || items.length === 0 ? (
         <EmptyState>The schedule will be published before the trip.</EmptyState>
       ) : (
         <div className="space-y-8">

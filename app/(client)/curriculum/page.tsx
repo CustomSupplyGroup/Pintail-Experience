@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default async function CurriculumPage() {
   const supabase = await createClient();
-  const { data: sessions } = await supabase
+  const { data: sessions, error } = await supabase
     .from("curriculum_sessions")
     .select("id, session_number, title, scripture_reference, audio_mux_id")
     .not("published_at", "is", null)
@@ -17,7 +17,9 @@ export default async function CurriculumPage() {
         title="Curriculum"
         subtitle="Teaching sessions in text and audio."
       />
-      {!sessions || sessions.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load the curriculum right now.</EmptyState>
+      ) : !sessions || sessions.length === 0 ? (
         <EmptyState>
           The teaching library will fill in as sessions are published.
         </EmptyState>

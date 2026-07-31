@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default async function LogisticsPage() {
   const supabase = await createClient();
-  const { data: pages } = await supabase
+  const { data: pages, error } = await supabase
     .from("trip_pages")
     .select("id, title, slug")
     .eq("visible", true)
@@ -17,7 +17,9 @@ export default async function LogisticsPage() {
         title="Logistics & info"
         subtitle="Everything you need to know before you go."
       />
-      {!pages || pages.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load logistics right now.</EmptyState>
+      ) : !pages || pages.length === 0 ? (
         <EmptyState>Travel details and the packing list are coming soon.</EmptyState>
       ) : (
         <ul className="space-y-3">

@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, serviceRoleConfigured } from "@/lib/supabase/admin";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
+import { getActiveExperience } from "@/lib/trip";
 import { sendEmail, broadcastEmailHtml, emailConfigured } from "@/lib/email";
 import type { Database } from "@/lib/database.types";
 
@@ -13,12 +16,14 @@ export async function sendBroadcast(
   _prev: BroadcastState,
   formData: FormData,
 ): Promise<BroadcastState> {
-  const supabase = await createClient();
+  let staff;
+  try {
+    staff = await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, message: "You're signed out." };
+  const supabase = await createClient();
 
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
@@ -27,19 +32,15 @@ export async function sendBroadcast(
 
   if (!title) return { ok: false, message: "Give the announcement a title." };
 
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("id")
-    .neq("status", "draft")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
+  const { trip, error: tripError } = await getActiveExperience(supabase);
+  if (tripError) {
+    return { ok: false, message: "Couldn't look up the trip. Try again." };
+  }
   if (!trip) return { ok: false, message: "No active trip to announce to." };
 
   const { error: insertError } = await supabase.from("announcements").insert({
     trip_id: trip.id,
-    created_by: user.id,
+    created_by: staff.id,
     title,
     body: body || null,
     channel,
@@ -57,10 +58,23 @@ export async function sendBroadcast(
       emailNote =
         " Posted in-app, but email was skipped — add RESEND_API_KEY to send email.";
     } else {
-      const { data: rows } = await supabase
+      // Read recipients with the service role when available so we never depend
+      // on the founder's RLS to see other attendees' emails; fall back to the
+      // staff-scoped client otherwise. We're already inside a requireStaff gate.
+      const reader = serviceRoleConfigured() ? createAdminClient() : supabase;
+      const { data: rows, error: rowsError } = await reader
         .from("trip_attendees")
         .select("users(email)")
         .eq("trip_id", trip.id);
+
+      if (rowsError) {
+        console.error("broadcast recipient read failed:", rowsError.message);
+        revalidatePath("/admin");
+        return {
+          ok: true,
+          message: "Announcement posted, but couldn't load emails to send.",
+        };
+      }
 
       const emails = (rows ?? [])
         .map((r) => (r.users as { email: string } | null)?.email)

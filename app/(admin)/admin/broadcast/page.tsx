@@ -7,7 +7,7 @@ export default function BroadcastPage() {
     <div className="mx-auto max-w-xl">
       <PageHeader
         title="Send a broadcast"
-        subtitle="Post an announcement to every attendee."
+        subtitle="Posts an in-app announcement to every attendee, with an option to also email them."
       />
       <BroadcastForm emailReady={emailConfigured()} />
     </div>

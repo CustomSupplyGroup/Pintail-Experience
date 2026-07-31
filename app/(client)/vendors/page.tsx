@@ -24,7 +24,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default async function VendorsPage() {
   const supabase = await createClient();
-  const { data: vendors } = await supabase
+  const { data: vendors, error } = await supabase
     .from("vendors")
     .select("id, name, slug, role, description, featured_photo_url")
     .order("name", { ascending: true });
@@ -32,7 +32,9 @@ export default async function VendorsPage() {
   return (
     <div>
       <PageHeader title="The Hosting Team" subtitle="Who you'll meet on the trip." />
-      {!vendors || vendors.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load the hosting team right now.</EmptyState>
+      ) : !vendors || vendors.length === 0 ? (
         <EmptyState>Vendor profiles are on the way.</EmptyState>
       ) : (
         <ul className="space-y-3">

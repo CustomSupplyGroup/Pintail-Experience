@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/page-header";
 import { Markdown } from "@/components/markdown";
 
 export default async function VendorDetailPage({
@@ -11,13 +12,28 @@ export default async function VendorDetailPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: vendor } = await supabase
+  const { data: vendor, error } = await supabase
     .from("vendors")
     .select(
       "name, role, description, website_url, contact_name, contact_phone, featured_photo_url",
     )
     .eq("slug", slug)
     .maybeSingle();
+
+  if (error) {
+    console.error("vendor detail: read failed", error.message);
+    return (
+      <article className="space-y-5">
+        <Link
+          href="/vendors"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← The Hosting Team
+        </Link>
+        <EmptyState>Couldn&apos;t load this profile right now.</EmptyState>
+      </article>
+    );
+  }
 
   if (!vendor) notFound();
 

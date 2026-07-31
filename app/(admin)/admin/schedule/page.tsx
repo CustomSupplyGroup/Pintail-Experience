@@ -15,7 +15,7 @@ function fmt(t: string | null): string {
 
 export default async function ScheduleAdminPage() {
   const supabase = await createClient();
-  const { data: items } = await supabase
+  const { data: items, error } = await supabase
     .from("schedule_items")
     .select("id, day_number, start_time, end_time, title, location, category, visible_to_attendees")
     .order("day_number", { ascending: true })
@@ -36,7 +36,9 @@ export default async function ScheduleAdminPage() {
         </Link>
       </div>
 
-      {!items || items.length === 0 ? (
+      {error ? (
+        <EmptyState>Couldn&apos;t load the schedule: {error.message}</EmptyState>
+      ) : !items || items.length === 0 ? (
         <EmptyState>No schedule items yet.</EmptyState>
       ) : (
         <div className="space-y-6">

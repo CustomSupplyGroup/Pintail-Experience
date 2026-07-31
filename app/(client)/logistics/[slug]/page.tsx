@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/page-header";
 import { Markdown } from "@/components/markdown";
 
 export default async function LogisticsDetailPage({
@@ -11,11 +12,26 @@ export default async function LogisticsDetailPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: page } = await supabase
+  const { data: page, error } = await supabase
     .from("trip_pages")
     .select("title, content, visible")
     .eq("slug", slug)
     .maybeSingle();
+
+  if (error) {
+    console.error("logistics detail: page read failed", error.message);
+    return (
+      <article className="space-y-5">
+        <Link
+          href="/logistics"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Logistics
+        </Link>
+        <EmptyState>Couldn&apos;t load this page right now.</EmptyState>
+      </article>
+    );
+  }
 
   if (!page || !page.visible) notFound();
 

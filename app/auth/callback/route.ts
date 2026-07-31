@@ -28,11 +28,15 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   let role = null;
   if (user) {
-    const { data } = await supabase
+    const { data, error: roleError } = await supabase
       .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
+    if (roleError) {
+      console.error("auth callback: role lookup failed", roleError.message);
+      return NextResponse.redirect(`${origin}/home`);
+    }
     role = data?.role ?? null;
   }
 

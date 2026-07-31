@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 
 export type CurriculumState = { ok: boolean; message: string };
 
@@ -15,6 +16,12 @@ export async function saveCurriculum(
   _prev: CurriculumState,
   formData: FormData,
 ): Promise<CurriculumState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const id = str(formData, "id");
   const tripId = str(formData, "trip_id");
@@ -69,6 +76,7 @@ export async function saveCurriculum(
 }
 
 export async function deleteCurriculum(formData: FormData): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const id = String(formData.get("id") ?? "");
   if (!id) return;

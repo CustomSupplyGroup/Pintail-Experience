@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 
 export type PageState = { ok: boolean; message: string };
 
@@ -22,6 +23,12 @@ export async function savePage(
   _prev: PageState,
   formData: FormData,
 ): Promise<PageState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   const supabase = await createClient();
   const id = str(formData, "id");
   const tripId = str(formData, "trip_id");
@@ -64,6 +71,7 @@ export async function savePage(
 }
 
 export async function deletePage(formData: FormData): Promise<void> {
+  await requireStaff();
   const supabase = await createClient();
   const id = String(formData.get("id") ?? "");
   if (!id) return;

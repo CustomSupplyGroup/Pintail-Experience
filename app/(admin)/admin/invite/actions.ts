@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, serviceRoleConfigured } from "@/lib/supabase/admin";
+import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
+import { getActiveExperience } from "@/lib/trip";
 
 export type InviteState = { ok: boolean; message: string };
 
@@ -28,6 +30,12 @@ export async function inviteAttendees(
   _prev: InviteState,
   formData: FormData,
 ): Promise<InviteState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
   if (!serviceRoleConfigured()) {
     return {
       ok: false,
@@ -41,15 +49,12 @@ export async function inviteAttendees(
     return { ok: false, message: "Add at least one email address." };
   }
 
-  // Find the live trip to enroll invitees into.
+  // Find the active experience to enroll invitees into.
   const supabase = await createClient();
-  const { data: trip } = await supabase
-    .from("trips")
-    .select("id")
-    .neq("status", "draft")
-    .order("start_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { trip, error: tripError } = await getActiveExperience(supabase);
+  if (tripError) {
+    return { ok: false, message: "Couldn't look up the trip. Try again." };
+  }
 
   const admin = createAdminClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
