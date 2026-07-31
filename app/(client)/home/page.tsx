@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSelectedTrip } from "@/lib/trip";
 import { getLatestDevotional } from "@/lib/content";
-import { daysUntilDate } from "@/lib/utils";
+import { daysUntilDate, formatCents } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { VideoBackground } from "@/components/video-background";
@@ -19,7 +19,10 @@ export default async function HomePage() {
 
   // Signed-in attendees get enrolled + a profile-completeness check.
   // Guests (preview) skip all of this.
-  let attendee: { shirt_size: string | null } | null = null;
+  let attendee: {
+    shirt_size: string | null;
+    amount_paid_cents: number;
+  } | null = null;
   if (user) {
     const { data: tripId, error: enrollError } = await supabase.rpc(
       "ensure_trip_enrollment",
@@ -29,7 +32,7 @@ export default async function HomePage() {
     } else if (tripId) {
       const { data, error: attendeeError } = await supabase
         .from("trip_attendees")
-        .select("shirt_size")
+        .select("shirt_size, amount_paid_cents")
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -39,6 +42,13 @@ export default async function HomePage() {
       attendee = data;
     }
   }
+
+  // Payment standing for the selected trip (only when a price is set).
+  const priceCents = trip?.price_cents ?? null;
+  const paidCents = attendee?.amount_paid_cents ?? 0;
+  const balanceCents =
+    priceCents != null ? Math.max(priceCents - paidCents, 0) : null;
+  const showPayment = Boolean(user) && priceCents != null;
 
   const latest = trip
     ? await getLatestDevotional(supabase, trip.id, trip.start_date)
@@ -108,6 +118,41 @@ export default async function HomePage() {
           </p>
         </div>
       </Link>
+
+      {showPayment && (
+        <Card className={balanceCents === 0 ? undefined : "border-primary/40"}>
+          <CardHeader>
+            <CardTitle className="text-sm font-normal text-primary">
+              Your payment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {balanceCents === 0 ? (
+              <p className="font-serif text-xl">Paid in full — thank you.</p>
+            ) : (
+              <>
+                <p className="font-serif text-2xl">
+                  {formatCents(balanceCents)}{" "}
+                  <span className="text-base text-muted-foreground">due</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {formatCents(paidCents)} paid of {formatCents(priceCents)}.
+                </p>
+                {trip?.payment_url && (
+                  <a
+                    href={trip.payment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonVariants({})}
+                  >
+                    Make a payment
+                  </a>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {latestDevotional ? (
         <Link href={`/devotionals/${latestDevotional.id}`}>

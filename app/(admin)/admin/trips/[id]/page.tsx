@@ -58,7 +58,7 @@ export default async function TripWorkspacePage({
   const { data: trip, error } = await supabase
     .from("trips")
     .select(
-      "id, name, location, start_date, end_date, status, planning_status, capacity, tagline, subtitle, planning_owner_id",
+      "id, name, location, start_date, end_date, status, planning_status, capacity, tagline, subtitle, planning_owner_id, price_cents, deposit_cents, payment_url",
     )
     .eq("id", id)
     .maybeSingle();
@@ -158,6 +158,9 @@ export default async function TripWorkspacePage({
     capacity: trip.capacity,
     tagline: trip.tagline,
     subtitle: trip.subtitle,
+    price_cents: trip.price_cents,
+    deposit_cents: trip.deposit_cents,
+    payment_url: trip.payment_url,
   };
 
   return (

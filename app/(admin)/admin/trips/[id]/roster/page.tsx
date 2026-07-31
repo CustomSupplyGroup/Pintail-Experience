@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { formatCents } from "@/lib/utils";
 
 type PaymentStatus = "unpaid" | "deposit" | "paid_in_full" | "refunded";
 
@@ -34,7 +35,7 @@ export default async function RosterPage({
 
   const { data: trip, error: tripError } = await supabase
     .from("trips")
-    .select("id, name, capacity")
+    .select("id, name, capacity, price_cents")
     .eq("id", id)
     .maybeSingle();
 
@@ -52,7 +53,7 @@ export default async function RosterPage({
   const { data: rows, error } = await supabase
     .from("trip_attendees")
     .select(
-      "user_id, payment_status, waiver_signed_at, dietary_notes, users(full_name, email)",
+      "user_id, payment_status, amount_paid_cents, waiver_signed_at, dietary_notes, users(full_name, email)",
     )
     .eq("trip_id", trip.id);
 
@@ -78,6 +79,7 @@ export default async function RosterPage({
     .map((r) => ({
       user_id: r.user_id,
       payment_status: r.payment_status as PaymentStatus,
+      amount_paid_cents: r.amount_paid_cents ?? 0,
       waiver_signed: Boolean(r.waiver_signed_at),
       dietary: (r.dietary_notes ?? "").trim(),
       full_name:
@@ -120,6 +122,7 @@ export default async function RosterPage({
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Payment</th>
+                <th className="px-4 py-3 font-medium">Balance</th>
                 <th className="px-4 py-3 font-medium">Waiver</th>
                 <th className="px-4 py-3 font-medium">Dietary</th>
               </tr>
@@ -143,6 +146,31 @@ export default async function RosterPage({
                     <Badge variant={PAYMENT_VARIANT[p.payment_status]}>
                       {PAYMENT_LABEL[p.payment_status]}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {trip.price_cents == null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      (() => {
+                        const bal = Math.max(
+                          trip.price_cents - p.amount_paid_cents,
+                          0,
+                        );
+                        return (
+                          <span className={bal === 0 ? "text-primary" : "text-amber-400"}>
+                            {formatCents(p.amount_paid_cents)}
+                            <span className="text-muted-foreground">
+                              {" "}/ {formatCents(trip.price_cents)}
+                            </span>
+                            {bal > 0 && (
+                              <span className="block text-xs text-muted-foreground">
+                                {formatCents(bal)} due
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {p.waiver_signed ? (

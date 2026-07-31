@@ -15,7 +15,7 @@ export default async function AttendeeDetailPage({
 
   const { data: trip, error: tripError } = await supabase
     .from("trips")
-    .select("id, name")
+    .select("id, name, price_cents, payment_url")
     .eq("id", id)
     .maybeSingle();
 
@@ -66,7 +66,7 @@ export default async function AttendeeDetailPage({
   const { data: attendee, error: attendeeError } = await supabase
     .from("trip_attendees")
     .select(
-      "payment_status, room_assignment, waiver_signed_at, shirt_size, jacket_size, hat_size, glove_size, boot_size, dietary_notes, prayer_request",
+      "payment_status, amount_paid_cents, room_assignment, waiver_signed_at, shirt_size, jacket_size, hat_size, glove_size, boot_size, dietary_notes, prayer_request",
     )
     .eq("trip_id", trip.id)
     .eq("user_id", userId)
@@ -100,10 +100,13 @@ export default async function AttendeeDetailPage({
           person={person}
           tripId={trip.id}
           tripName={trip.name}
+          priceCents={trip.price_cents}
+          payUrl={trip.payment_url}
           attendee={
             attendee
               ? {
                   payment_status: attendee.payment_status,
+                  amount_paid_cents: attendee.amount_paid_cents,
                   room_assignment: attendee.room_assignment,
                   waiver_signed_at: attendee.waiver_signed_at,
                 }

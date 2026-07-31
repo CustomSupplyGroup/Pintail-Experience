@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
+import { dollarsToCents } from "@/lib/utils";
 import type { Database } from "@/lib/database.types";
 
 type TripStatus = Database["public"]["Enums"]["trip_status"];
@@ -70,6 +71,9 @@ export async function updateTrip(
       capacity,
       tagline: str(formData, "tagline"),
       subtitle: str(formData, "subtitle"),
+      price_cents: dollarsToCents(str(formData, "price")),
+      deposit_cents: dollarsToCents(str(formData, "deposit")),
+      payment_url: str(formData, "payment_url"),
     })
     .eq("id", id);
 

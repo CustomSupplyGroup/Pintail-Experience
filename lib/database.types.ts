@@ -278,6 +278,7 @@ export type Database = {
       }
       trip_attendees: {
         Row: {
+          amount_paid_cents: number
           arrival_info: string | null
           balance_paid_at: string | null
           boot_size: string | null
@@ -300,6 +301,7 @@ export type Database = {
           waiver_signed_at: string | null
         }
         Insert: {
+          amount_paid_cents?: number
           arrival_info?: string | null
           balance_paid_at?: string | null
           boot_size?: string | null
@@ -322,6 +324,7 @@ export type Database = {
           waiver_signed_at?: string | null
         }
         Update: {
+          amount_paid_cents?: number
           arrival_info?: string | null
           balance_paid_at?: string | null
           boot_size?: string | null
@@ -472,9 +475,12 @@ export type Database = {
           brand_film_mux_id: string | null
           capacity: number | null
           created_at: string
+          deposit_cents: number | null
           description: string | null
           end_date: string | null
           experience_type: string | null
+          payment_url: string | null
+          price_cents: number | null
           hero_image_url: string | null
           id: string
           location: string | null
@@ -492,9 +498,12 @@ export type Database = {
           brand_film_mux_id?: string | null
           capacity?: number | null
           created_at?: string
+          deposit_cents?: number | null
           description?: string | null
           end_date?: string | null
           experience_type?: string | null
+          payment_url?: string | null
+          price_cents?: number | null
           hero_image_url?: string | null
           id?: string
           location?: string | null
@@ -512,9 +521,12 @@ export type Database = {
           brand_film_mux_id?: string | null
           capacity?: number | null
           created_at?: string
+          deposit_cents?: number | null
           description?: string | null
           end_date?: string | null
           experience_type?: string | null
+          payment_url?: string | null
+          price_cents?: number | null
           hero_image_url?: string | null
           id?: string
           location?: string | null

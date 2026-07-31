@@ -88,6 +88,34 @@ export function inquiryNotificationHtml(opts: {
     ${opts.message ? row("Message", opts.message.replace(/\n/g, "<br/>")) : ""}`);
 }
 
+export function paymentReminderHtml(opts: {
+  name?: string | null;
+  tripName: string;
+  balanceLabel: string;
+  paidLabel: string;
+  totalLabel: string;
+  payUrl?: string | null;
+}): string {
+  return shell(`
+    <h1 style="color:#eee7e0;font-size:24px;margin:0 0 16px;">A note on your balance${opts.name ? `, ${opts.name}` : ""}</h1>
+    <p style="font-size:16px;line-height:1.6;color:#eee7e0;">
+      Thank you for joining us for <strong style="color:#e5c188;">${opts.tripName}</strong>.
+      Here's where your payment stands:
+    </p>
+    <table style="width:100%;margin:20px 0;border-collapse:collapse;font-family:Arial,sans-serif;font-size:15px;color:#eee7e0;">
+      <tr><td style="padding:6px 0;color:#c9bca8;">Trip total</td><td style="padding:6px 0;text-align:right;">${opts.totalLabel}</td></tr>
+      <tr><td style="padding:6px 0;color:#c9bca8;">Paid so far</td><td style="padding:6px 0;text-align:right;">${opts.paidLabel}</td></tr>
+      <tr><td style="padding:10px 0 0;border-top:1px solid rgba(140,106,63,.35);color:#e5c188;font-weight:bold;">Balance due</td><td style="padding:10px 0 0;border-top:1px solid rgba(140,106,63,.35);text-align:right;color:#e5c188;font-weight:bold;">${opts.balanceLabel}</td></tr>
+    </table>
+    ${
+      opts.payUrl
+        ? `<p style="text-align:center;margin:28px 0;">
+             <a href="${opts.payUrl}" style="background:#e5c188;color:#1f2421;text-decoration:none;font-family:Arial,sans-serif;font-weight:600;font-size:15px;padding:12px 22px;border-radius:8px;display:inline-block;">Make a payment</a>
+           </p>`
+        : `<p style="font-size:15px;color:#c9bca8;">Reach out to the hosts to arrange your payment.</p>`
+    }`);
+}
+
 export function broadcastEmailHtml(opts: {
   title: string;
   body: string;

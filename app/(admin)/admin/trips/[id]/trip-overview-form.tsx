@@ -25,7 +25,14 @@ export type TripOverview = {
   capacity: number | null;
   tagline: string | null;
   subtitle: string | null;
+  price_cents: number | null;
+  deposit_cents: number | null;
+  payment_url: string | null;
 };
+
+function dollars(cents: number | null): string {
+  return cents == null ? "" : String(cents / 100);
+}
 
 export function TripOverviewForm({ trip }: { trip: TripOverview }) {
   const [state, formAction, pending] = useActionState(updateTrip, initialState);
@@ -117,6 +124,43 @@ export function TripOverviewForm({ trip }: { trip: TripOverview }) {
             placeholder="16"
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="price">Price per guest ($)</Label>
+          <Input
+            id="price"
+            name="price"
+            inputMode="decimal"
+            defaultValue={dollars(trip.price_cents)}
+            placeholder="2400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="deposit">Deposit ($, optional)</Label>
+          <Input
+            id="deposit"
+            name="deposit"
+            inputMode="decimal"
+            defaultValue={dollars(trip.deposit_cents)}
+            placeholder="500"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="payment_url">Payment link (WeTravel / Stripe)</Label>
+        <Input
+          id="payment_url"
+          name="payment_url"
+          type="url"
+          defaultValue={trip.payment_url ?? ""}
+          placeholder="https://…"
+        />
+        <p className="text-xs text-muted-foreground">
+          Guests get a &ldquo;Make a payment&rdquo; button pointing here.
+        </p>
       </div>
 
       <div className="space-y-2">
