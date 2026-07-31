@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
+import { getSelectedTrip } from "@/lib/trip";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,9 +24,22 @@ const CATEGORY_TONE: Record<string, string> = {
 
 export default async function SchedulePage() {
   const supabase = await createClient();
+  const user = await getCurrentUser();
+
+  const { trip, error: tripError } = await getSelectedTrip(supabase, user);
+  if (tripError || !trip) {
+    return (
+      <div>
+        <PageHeader title="Schedule" subtitle="The run-of-show, day by day." />
+        <EmptyState>The schedule will be published before the trip.</EmptyState>
+      </div>
+    );
+  }
+
   const { data: items, error } = await supabase
     .from("schedule_items")
     .select("id, day_number, start_time, title, description, location, category")
+    .eq("trip_id", trip.id)
     .eq("visible_to_attendees", true)
     .order("day_number", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: true });

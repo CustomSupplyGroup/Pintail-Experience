@@ -1,18 +1,42 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
+import { getSelectedTrip } from "@/lib/trip";
+import { getTripDevotionals } from "@/lib/content";
 import { PageHeader, EmptyState } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function DevotionalsPage() {
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
+  const user = await getCurrentUser();
 
-  const { data: devotionals, error } = await supabase
-    .from("devotionals")
-    .select("id, title, scripture, scheduled_for, audio_mux_id")
-    .not("scheduled_for", "is", null)
-    .lte("scheduled_for", nowIso)
-    .order("scheduled_for", { ascending: false });
+  const { trip, error: tripError } = await getSelectedTrip(supabase, user);
+  if (tripError) {
+    return (
+      <div>
+        <PageHeader title="Devotionals" />
+        <EmptyState>Couldn&apos;t load your trip right now.</EmptyState>
+      </div>
+    );
+  }
+  if (!trip) {
+    return (
+      <div>
+        <PageHeader title="Devotionals" />
+        <EmptyState>No trip selected yet.</EmptyState>
+      </div>
+    );
+  }
+
+  const { devotionals, error } = await getTripDevotionals(
+    supabase,
+    trip.id,
+    trip.start_date,
+    { releasedOnly: true },
+  );
+
+  // Newest first for reading.
+  const list = [...devotionals].reverse();
 
   return (
     <div>
@@ -22,20 +46,20 @@ export default async function DevotionalsPage() {
       />
       {error ? (
         <EmptyState>Couldn&apos;t load devotionals right now.</EmptyState>
-      ) : !devotionals || devotionals.length === 0 ? (
+      ) : list.length === 0 ? (
         <EmptyState>
           The first devotional will arrive soon. Watch for it.
         </EmptyState>
       ) : (
         <ul className="space-y-3">
-          {devotionals.map((d) => (
+          {list.map((d) => (
             <li key={d.id}>
               <Link href={`/devotionals/${d.id}`}>
                 <Card className="transition-colors hover:border-primary">
                   <CardContent className="pt-6">
                     <p className="font-serif text-xl">{d.title}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {d.scripture ?? ""}
+                      {d.scripture_reference ?? ""}
                       {d.audio_mux_id ? " · audio" : ""}
                     </p>
                   </CardContent>

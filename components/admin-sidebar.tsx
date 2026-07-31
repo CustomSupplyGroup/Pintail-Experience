@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  BookOpen,
-  Sunrise,
+  UserRound,
+  Library,
+  Compass,
   CalendarDays,
   Tent,
   FileText,
   Image as ImageIcon,
-  MapPin,
   Megaphone,
   Inbox,
 } from "lucide-react";
@@ -19,14 +19,14 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/hunts", label: "Hunts", icon: Compass },
+  { href: "/admin/members", label: "Members", icon: UserRound },
   { href: "/admin/roster", label: "Roster", icon: Users },
-  { href: "/admin/devotionals", label: "Devotionals", icon: Sunrise },
-  { href: "/admin/curriculum", label: "Curriculum", icon: BookOpen },
+  { href: "/admin/content", label: "Content", icon: Library },
   { href: "/admin/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/admin/vendors", label: "Vendors", icon: Tent },
   { href: "/admin/photos", label: "Photos", icon: ImageIcon },
   { href: "/admin/pages", label: "Logistics", icon: FileText },
-  { href: "/admin/trips", label: "Trips", icon: MapPin },
   { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
   { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
 ];

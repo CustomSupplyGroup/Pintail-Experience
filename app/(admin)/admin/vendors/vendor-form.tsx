@@ -34,6 +34,7 @@ type Vendor = {
   contact_phone: string | null;
   logo_url: string | null;
   featured_photo_url: string | null;
+  notes: string | null;
   featured: boolean;
 } | null;
 
@@ -111,6 +112,17 @@ export function VendorForm({ vendor }: { vendor: Vendor }) {
           <Label htmlFor="featured_photo_url">Hero photo URL</Label>
           <Input id="featured_photo_url" name="featured_photo_url" type="url" defaultValue={vendor?.featured_photo_url ?? ""} />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="notes">Internal notes (private)</Label>
+        <Textarea
+          id="notes"
+          name="notes"
+          rows={4}
+          defaultValue={vendor?.notes ?? ""}
+          placeholder="Anything the team should know — pricing, quirks, relationship history."
+        />
       </div>
 
       <label className="flex items-center gap-3 text-sm">

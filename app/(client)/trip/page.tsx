@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
+import { getSelectedTrip } from "@/lib/trip";
+import { getTripCurriculum } from "@/lib/content";
+import { daysUntilDate } from "@/lib/utils";
+import { PageHeader, EmptyState } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/markdown";
 import { VideoBackground } from "@/components/video-background";
 import { stock } from "@/lib/stock";
-import { getActiveExperience } from "@/lib/trip";
-import { daysUntilDate } from "@/lib/utils";
 
 function fmtDate(d: string | null): string {
   if (!d) return "";
@@ -26,15 +29,6 @@ function fmtTime(t: string | null): string {
   return `${h12}:${m}${ampm}`;
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  lodge: "Lodge",
-  dog_handler: "Dog Handler",
-  photographer: "Photographer",
-  leather_goods: "Pintail Goods",
-  speaker: "Teaching",
-  other: "Partner",
-};
-
 const ROLE_FALLBACK: Record<string, Parameters<typeof stock>[0]> = {
   lodge: "decoySpread",
   dog_handler: "boatHunter",
@@ -44,43 +38,64 @@ const ROLE_FALLBACK: Record<string, Parameters<typeof stock>[0]> = {
   other: "capPortrait",
 };
 
-export default async function TripOnePager() {
+export default async function TripInfoPage() {
   const supabase = await createClient();
+  const user = await getCurrentUser();
 
-  const { trip, error: tripError } = await getActiveExperience(supabase);
-  if (tripError) {
-    console.error("trip page: active trip lookup failed", tripError);
+  const { trip, error: tripError } = await getSelectedTrip(supabase, user);
+  if (tripError) console.error("trip info: trip lookup failed", tripError);
+  if (!trip) {
+    return (
+      <div>
+        <PageHeader title="Trip Info" />
+        <EmptyState>Your trip details are coming soon.</EmptyState>
+      </div>
+    );
   }
 
   const [
     { data: pages, error: pagesError },
-    { data: vendors, error: vendorsError },
+    { data: vendorRows, error: vendorsError },
     { data: schedule, error: scheduleError },
+    { sessions: curriculum },
   ] = await Promise.all([
-      supabase
-        .from("trip_pages")
-        .select("slug, title, content")
-        .eq("visible", true)
-        .in("slug", ["vision", "whats-included"]),
-      supabase
-        .from("vendors")
-        .select("name, slug, role, featured_photo_url")
-        .order("name", { ascending: true }),
-      supabase
-        .from("schedule_items")
-        .select("id, day_number, start_time, title, category")
-        .eq("visible_to_attendees", true)
-        .order("day_number", { ascending: true })
-        .order("start_time", { ascending: true, nullsFirst: true }),
-    ]);
+    supabase
+      .from("trip_pages")
+      .select("slug, title, content, sort_order")
+      .eq("trip_id", trip.id)
+      .eq("visible", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("trip_vendors")
+      .select("role_on_trip, vendors(name, slug, role, featured_photo_url)")
+      .eq("trip_id", trip.id),
+    supabase
+      .from("schedule_items")
+      .select("id, day_number, start_time, title, category")
+      .eq("trip_id", trip.id)
+      .eq("visible_to_attendees", true)
+      .order("day_number", { ascending: true })
+      .order("start_time", { ascending: true, nullsFirst: true }),
+    getTripCurriculum(supabase, trip.id),
+  ]);
 
-  if (pagesError) console.error("trip page: pages read failed", pagesError.message);
-  if (vendorsError) console.error("trip page: vendors read failed", vendorsError.message);
-  if (scheduleError) console.error("trip page: schedule read failed", scheduleError.message);
+  if (pagesError) console.error("trip info: pages read failed", pagesError.message);
+  if (vendorsError) console.error("trip info: vendors read failed", vendorsError.message);
+  if (scheduleError) console.error("trip info: schedule read failed", scheduleError.message);
 
-  const vision = pages?.find((p) => p.slug === "vision");
-  const included = pages?.find((p) => p.slug === "whats-included");
-  const countdown = trip?.start_date ? daysUntilDate(trip.start_date) : null;
+  const countdown = trip.start_date ? daysUntilDate(trip.start_date) : null;
+
+  const vendors = (vendorRows ?? [])
+    .map((r) => {
+      const v = r.vendors as {
+        name: string;
+        slug: string;
+        role: string;
+        featured_photo_url: string | null;
+      } | null;
+      return v ? { ...v, role_on_trip: r.role_on_trip } : null;
+    })
+    .filter((v): v is NonNullable<typeof v> => Boolean(v));
 
   const byDay = new Map<number, NonNullable<typeof schedule>>();
   for (const it of schedule ?? []) {
@@ -98,13 +113,16 @@ export default async function TripOnePager() {
       </Link>
 
       {/* Hero */}
-      <section className="relative -mx-4 overflow-hidden">
+      <section className="relative -mx-4 overflow-hidden md:-mx-0 md:rounded-xl">
         <div className="relative h-72">
           <VideoBackground src="/video/hero-1.mp4" poster="/img/hero-1-poster.jpg" />
           <div className="absolute inset-0 bg-gradient-to-t from-pintail-night via-pintail-night/60 to-pintail-night/20" />
           <div className="absolute inset-x-0 bottom-0 p-5">
+            <p className="text-xs uppercase tracking-[0.25em] text-primary">
+              Trip Info
+            </p>
             <p className="font-display text-4xl text-pintail-cream">
-              {trip?.name ?? "The Pintail Experience"}
+              {trip.name}
             </p>
             {countdown !== null && (
               <p className="mt-1 font-serif text-2xl text-primary">
@@ -113,46 +131,56 @@ export default async function TripOnePager() {
                   : `${countdown} ${countdown === 1 ? "day" : "days"} to go`}
               </p>
             )}
-            {(trip?.start_date || trip?.location) && (
+            {(trip.start_date || trip.location) && (
               <p className="mt-1 text-sm text-pintail-cream/80">
-                {trip?.start_date && (
+                {trip.start_date && (
                   <>
                     {fmtDate(trip.start_date)}
                     {trip.end_date && ` – ${fmtDate(trip.end_date)}`}
                   </>
                 )}
-                {trip?.location && (
-                  <span className="block">{trip.location}</span>
-                )}
+                {trip.location && <span className="block">{trip.location}</span>}
               </p>
             )}
           </div>
         </div>
       </section>
 
-      {/* The Vision */}
-      {vision?.content && (
-        <section>
-          <h2 className="mb-2 font-serif text-2xl text-primary">The Vision</h2>
-          <Markdown>{vision.content}</Markdown>
-        </section>
+      {/* Overview + logistics pages (merged) */}
+      {(pages ?? []).map((p) =>
+        p.content ? (
+          <section key={p.slug}>
+            <h2 className="mb-2 font-serif text-2xl text-primary">{p.title}</h2>
+            <Markdown>{p.content}</Markdown>
+          </section>
+        ) : null,
       )}
 
-      {/* The Details */}
-      {included?.content && (
+      {/* Teaching */}
+      {curriculum.length > 0 && (
         <section>
-          <h2 className="mb-2 font-serif text-2xl text-primary">The Details</h2>
-          <Markdown>{included.content}</Markdown>
+          <h2 className="mb-3 font-serif text-2xl text-primary">The Teaching</h2>
+          <Link href="/curriculum">
+            <Card className="transition-colors hover:border-primary">
+              <CardContent className="flex items-center justify-between py-4">
+                <span className="text-sm text-foreground/90">
+                  {curriculum.length} teaching{" "}
+                  {curriculum.length === 1 ? "session" : "sessions"}
+                </span>
+                <span className="text-sm text-primary">Open the library →</span>
+              </CardContent>
+            </Card>
+          </Link>
         </section>
       )}
 
       {/* The Hosting Team */}
-      {vendors && vendors.length > 0 && (
+      {vendors.length > 0 && (
         <section>
           <h2 className="mb-3 font-serif text-2xl text-primary">
             The Hosting Team
           </h2>
-          <ul className="grid grid-cols-2 gap-3">
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {vendors.map((v) => (
               <li key={v.slug}>
                 <Link href={`/vendors/${v.slug}`}>
@@ -168,7 +196,7 @@ export default async function TripOnePager() {
                     />
                     <CardContent className="p-3">
                       <p className="text-[0.65rem] uppercase tracking-wide text-primary">
-                        {ROLE_LABEL[v.role] ?? "Partner"}
+                        {v.role_on_trip ?? "Partner"}
                       </p>
                       <p className="mt-0.5 font-serif text-base leading-tight">
                         {v.name}
@@ -182,7 +210,7 @@ export default async function TripOnePager() {
         </section>
       )}
 
-      {/* The Schedule — appears once it's posted */}
+      {/* Schedule summary */}
       <section>
         <h2 className="mb-3 font-serif text-2xl text-primary">The Schedule</h2>
         {byDay.size === 0 ? (
@@ -190,7 +218,6 @@ export default async function TripOnePager() {
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">
                 The day-by-day run of the trip drops here as we lock it in.
-                Trust us — it&apos;s worth the wait.
               </p>
             </CardContent>
           </Card>

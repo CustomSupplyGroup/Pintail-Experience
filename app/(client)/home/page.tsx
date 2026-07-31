@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getActiveExperience } from "@/lib/trip";
+import { getSelectedTrip } from "@/lib/trip";
+import { getLatestDevotional } from "@/lib/content";
 import { daysUntilDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -11,9 +12,9 @@ export default async function HomePage() {
   const supabase = await createClient();
   const user = await getCurrentUser();
 
-  const { trip, error: tripError } = await getActiveExperience(supabase);
+  const { trip, error: tripError } = await getSelectedTrip(supabase, user);
   if (tripError) {
-    console.error("home: active trip lookup failed", tripError);
+    console.error("home: selected trip lookup failed", tripError);
   }
 
   // Signed-in attendees get enrolled + a profile-completeness check.
@@ -39,19 +40,13 @@ export default async function HomePage() {
     }
   }
 
-  const { data: latestDevotional, error: devotionalError } = await supabase
-    .from("devotionals")
-    .select("id, title, scripture")
-    .not("scheduled_for", "is", null)
-    .lte("scheduled_for", new Date().toISOString())
-    .order("scheduled_for", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (devotionalError) {
-    console.error("home: latest devotional read failed", devotionalError.message);
-  }
+  const latest = trip
+    ? await getLatestDevotional(supabase, trip.id, trip.start_date)
+    : { devotional: null, error: null };
+  const latestDevotional = latest.devotional;
 
-  const profileIncomplete = Boolean(user) && (!user?.full_name || !attendee?.shirt_size);
+  const profileIncomplete =
+    Boolean(user) && (!user?.full_name || !attendee?.shirt_size);
   const countdown = trip?.start_date ? daysUntilDate(trip.start_date) : null;
   const firstName = user?.full_name?.split(" ")[0];
 
@@ -109,7 +104,7 @@ export default async function HomePage() {
             <p className="text-sm text-pintail-cream/70">{trip.location}</p>
           )}
           <p className="mt-3 text-xs uppercase tracking-wide text-primary/80 transition-colors group-hover:text-primary">
-            Tap to explore the trip →
+            Tap for trip info →
           </p>
         </div>
       </Link>
@@ -119,16 +114,19 @@ export default async function HomePage() {
           <Card className="transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="text-sm font-normal text-primary">
-                Latest devotional
+                Today&apos;s devotional
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="font-serif text-xl">{latestDevotional.title}</p>
-              {latestDevotional.scripture && (
+              {latestDevotional.scripture_reference && (
                 <p className="mt-1 text-sm italic text-muted-foreground">
-                  {latestDevotional.scripture}
+                  {latestDevotional.scripture_reference}
                 </p>
               )}
+              <p className="mt-3 text-xs text-muted-foreground">
+                The most recent devotional released for {trip?.name ?? "your trip"}.
+              </p>
             </CardContent>
           </Card>
         </Link>
@@ -139,8 +137,8 @@ export default async function HomePage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Devotionals, your schedule, and the curriculum library will appear
-              here as the trip draws closer.
+              Devotionals, your schedule, and the curriculum will appear here as
+              the trip draws closer.
             </p>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, serviceRoleConfigured } from "@/lib/supabase/admin";
 import { requireStaff, FORBIDDEN_STATE } from "@/lib/auth";
 import { getActiveExperience } from "@/lib/trip";
+import { sendEmail, welcomeEmailHtml } from "@/lib/email";
 
 export type InviteState = { ok: boolean; message: string };
 
@@ -84,6 +85,16 @@ export async function inviteAttendees(
       if (enrollErr && !enrollErr.message.includes("duplicate")) {
         console.error("enroll on invite failed:", enrollErr.message);
       }
+    }
+
+    // A branded welcome alongside Supabase's magic-link invite. Non-fatal.
+    const welcome = await sendEmail({
+      to: email,
+      subject: "Welcome to The Pintail Experience",
+      html: welcomeEmailHtml({ name, signInUrl: `${appUrl}/login` }),
+    });
+    if (!welcome.ok && !welcome.skipped) {
+      console.error("welcome email failed:", welcome.error);
     }
   }
 

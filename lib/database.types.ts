@@ -139,100 +139,6 @@ export type Database = {
         }
         Relationships: []
       }
-      curriculum_sessions: {
-        Row: {
-          audio_mux_id: string | null
-          created_at: string
-          discussion_questions: Json
-          id: string
-          published_at: string | null
-          scripture_reference: string | null
-          session_number: number
-          title: string
-          trip_id: string
-          video_mux_id: string | null
-          written_content: string | null
-        }
-        Insert: {
-          audio_mux_id?: string | null
-          created_at?: string
-          discussion_questions?: Json
-          id?: string
-          published_at?: string | null
-          scripture_reference?: string | null
-          session_number: number
-          title: string
-          trip_id: string
-          video_mux_id?: string | null
-          written_content?: string | null
-        }
-        Update: {
-          audio_mux_id?: string | null
-          created_at?: string
-          discussion_questions?: Json
-          id?: string
-          published_at?: string | null
-          scripture_reference?: string | null
-          session_number?: number
-          title?: string
-          trip_id?: string
-          video_mux_id?: string | null
-          written_content?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "curriculum_sessions_trip_id_fkey"
-            columns: ["trip_id"]
-            isOneToOne: false
-            referencedRelation: "trips"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      devotionals: {
-        Row: {
-          audio_mux_id: string | null
-          created_at: string
-          day_offset: number
-          id: string
-          scheduled_for: string | null
-          scripture: string | null
-          title: string
-          trip_id: string
-          written_content: string | null
-        }
-        Insert: {
-          audio_mux_id?: string | null
-          created_at?: string
-          day_offset: number
-          id?: string
-          scheduled_for?: string | null
-          scripture?: string | null
-          title: string
-          trip_id: string
-          written_content?: string | null
-        }
-        Update: {
-          audio_mux_id?: string | null
-          created_at?: string
-          day_offset?: number
-          id?: string
-          scheduled_for?: string | null
-          scripture?: string | null
-          title?: string
-          trip_id?: string
-          written_content?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "devotionals_trip_id_fkey"
-            columns: ["trip_id"]
-            isOneToOne: false
-            referencedRelation: "trips"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inquiries: {
         Row: {
           created_at: string
@@ -842,6 +748,13 @@ export type Database = {
       }
       has_content_access: { Args: never; Returns: boolean }
       has_staff_access: { Args: never; Returns: boolean }
+      trip_seat_counts: {
+        Args: never
+        Returns: {
+          seats_taken: number
+          trip_id: string
+        }[]
+      }
     }
     Enums: {
       announcement_channel: "in_app" | "push" | "email" | "all"

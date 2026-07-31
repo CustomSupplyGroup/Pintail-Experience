@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
+import { InquiryStatusSelect } from "./inquiry-status-select";
 
 export default async function InquiriesPage() {
   const supabase = await createClient();
@@ -38,7 +38,7 @@ export default async function InquiriesPage() {
                     {q.phone ? ` · ${q.phone}` : ""}
                   </p>
                 </div>
-                <Badge variant="secondary">{q.status}</Badge>
+                <InquiryStatusSelect id={q.id} status={q.status} />
               </div>
               {q.message && (
                 <p className="mt-3 text-sm text-muted-foreground">{q.message}</p>

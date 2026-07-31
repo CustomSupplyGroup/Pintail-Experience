@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
+import { getSelectedTrip } from "@/lib/trip";
+import { getTripCurriculum } from "@/lib/content";
 import { EmptyState } from "@/components/page-header";
 import { Markdown } from "@/components/markdown";
 import { AudioPlayer } from "@/components/audio-player";
@@ -12,17 +15,10 @@ export default async function CurriculumDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const user = await getCurrentUser();
 
-  const { data: session, error } = await supabase
-    .from("curriculum_sessions")
-    .select(
-      "session_number, title, scripture_reference, written_content, audio_mux_id, discussion_questions, published_at",
-    )
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error("curriculum detail: session read failed", error.message);
+  const { trip, error: tripError } = await getSelectedTrip(supabase, user);
+  if (tripError || !trip) {
     return (
       <article className="space-y-5">
         <Link
@@ -36,7 +32,24 @@ export default async function CurriculumDetailPage({
     );
   }
 
-  if (!session || !session.published_at) notFound();
+  const { sessions, error } = await getTripCurriculum(supabase, trip.id);
+  if (error) {
+    return (
+      <article className="space-y-5">
+        <Link
+          href="/curriculum"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Curriculum
+        </Link>
+        <EmptyState>Couldn&apos;t load this session right now.</EmptyState>
+      </article>
+    );
+  }
+
+  const index = sessions.findIndex((s) => s.id === id);
+  const session = index >= 0 ? sessions[index] : undefined;
+  if (!session) notFound();
 
   const questions = Array.isArray(session.discussion_questions)
     ? (session.discussion_questions as unknown[]).map(String)
@@ -53,7 +66,7 @@ export default async function CurriculumDetailPage({
 
       <header>
         <p className="text-xs uppercase tracking-wide text-primary">
-          Session {session.session_number}
+          Session {index + 1}
         </p>
         <h1 className="mt-1 font-serif text-3xl leading-tight">
           {session.title}
@@ -69,7 +82,7 @@ export default async function CurriculumDetailPage({
         <AudioPlayer playbackId={session.audio_mux_id} title={session.title} />
       )}
 
-      {session.written_content && <Markdown>{session.written_content}</Markdown>}
+      {session.body_md && <Markdown>{session.body_md}</Markdown>}
 
       {questions.length > 0 && (
         <section className="rounded-lg border border-border bg-card p-5">

@@ -50,6 +50,7 @@ export async function saveVendor(
     contact_phone: str(formData, "contact_phone"),
     logo_url: str(formData, "logo_url"),
     featured_photo_url: str(formData, "featured_photo_url"),
+    notes: str(formData, "notes"),
     featured: formData.get("featured") === "on",
   };
 
@@ -87,4 +88,70 @@ export async function deleteVendor(formData: FormData): Promise<void> {
   if (error) console.error("vendor delete failed:", error.message);
   revalidatePath("/admin/vendors");
   redirect("/admin/vendors");
+}
+
+// ── Vendor contacts (the CRM's people) ──────────────────────────────────────
+
+export type ContactState = { ok: boolean; message: string };
+
+export async function saveVendorContact(
+  _prev: ContactState,
+  formData: FormData,
+): Promise<ContactState> {
+  try {
+    await requireStaff();
+  } catch {
+    return FORBIDDEN_STATE;
+  }
+
+  const supabase = await createClient();
+  const id = str(formData, "id");
+  const vendorId = str(formData, "vendor_id");
+  if (!vendorId) return { ok: false, message: "Missing vendor." };
+
+  const name = str(formData, "name");
+  if (!name) return { ok: false, message: "Contact name is required." };
+
+  const payload = {
+    vendor_id: vendorId,
+    name,
+    role: str(formData, "role"),
+    email: str(formData, "email"),
+    phone: str(formData, "phone"),
+    notes: str(formData, "notes"),
+  };
+
+  if (id) {
+    const { error } = await supabase
+      .from("vendor_contacts")
+      .update(payload)
+      .eq("id", id);
+    if (error) {
+      console.error("vendor contact update failed:", error.message);
+      return { ok: false, message: `Couldn't save: ${error.message}` };
+    }
+  } else {
+    const { error } = await supabase.from("vendor_contacts").insert(payload);
+    if (error) {
+      console.error("vendor contact insert failed:", error.message);
+      return { ok: false, message: `Couldn't add: ${error.message}` };
+    }
+  }
+
+  revalidatePath(`/admin/vendors/${vendorId}`);
+  return { ok: true, message: "Contact saved." };
+}
+
+export async function deleteVendorContact(formData: FormData): Promise<void> {
+  await requireStaff();
+  const supabase = await createClient();
+  const id = String(formData.get("id") ?? "");
+  const vendorId = String(formData.get("vendor_id") ?? "");
+  if (!id) return;
+  const { error } = await supabase
+    .from("vendor_contacts")
+    .delete()
+    .eq("id", id);
+  if (error) console.error("vendor contact delete failed:", error.message);
+  if (vendorId) revalidatePath(`/admin/vendors/${vendorId}`);
 }
