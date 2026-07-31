@@ -62,6 +62,83 @@ export type Database = {
           },
         ]
       }
+      content_entries: {
+        Row: {
+          audio_mux_id: string | null
+          body_md: string | null
+          created_at: string
+          day_offset: number | null
+          discussion_questions: Json
+          id: string
+          published: boolean
+          scripture_reference: string | null
+          series_id: string
+          sort: number
+          title: string
+          video_mux_id: string | null
+        }
+        Insert: {
+          audio_mux_id?: string | null
+          body_md?: string | null
+          created_at?: string
+          day_offset?: number | null
+          discussion_questions?: Json
+          id?: string
+          published?: boolean
+          scripture_reference?: string | null
+          series_id: string
+          sort?: number
+          title: string
+          video_mux_id?: string | null
+        }
+        Update: {
+          audio_mux_id?: string | null
+          body_md?: string | null
+          created_at?: string
+          day_offset?: number | null
+          discussion_questions?: Json
+          id?: string
+          published?: boolean
+          scripture_reference?: string | null
+          series_id?: string
+          sort?: number
+          title?: string
+          video_mux_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "content_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_series: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: Database["public"]["Enums"]["content_kind"]
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["content_kind"]
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["content_kind"]
+          title?: string
+        }
+        Relationships: []
+      }
       curriculum_sessions: {
         Row: {
           audio_mux_id: string | null
@@ -377,6 +454,36 @@ export type Database = {
           },
         ]
       }
+      trip_content: {
+        Row: {
+          series_id: string
+          trip_id: string
+        }
+        Insert: {
+          series_id: string
+          trip_id: string
+        }
+        Update: {
+          series_id?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_content_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "content_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_content_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_pages: {
         Row: {
           content: string | null
@@ -418,48 +525,102 @@ export type Database = {
           },
         ]
       }
+      trip_vendors: {
+        Row: {
+          created_at: string
+          role_on_trip: string | null
+          trip_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          role_on_trip?: string | null
+          trip_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          role_on_trip?: string | null
+          trip_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_vendors_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_vendors_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           brand_film_mux_id: string | null
+          capacity: number | null
           created_at: string
           description: string | null
           end_date: string | null
+          experience_type: string | null
           hero_image_url: string | null
           id: string
           location: string | null
           lodge_id: string | null
           name: string
+          planning_owner_id: string | null
+          planning_status: Database["public"]["Enums"]["planning_status"]
           slug: string
           start_date: string | null
           status: Database["public"]["Enums"]["trip_status"]
+          subtitle: string | null
+          tagline: string | null
         }
         Insert: {
           brand_film_mux_id?: string | null
+          capacity?: number | null
           created_at?: string
           description?: string | null
           end_date?: string | null
+          experience_type?: string | null
           hero_image_url?: string | null
           id?: string
           location?: string | null
           lodge_id?: string | null
           name: string
+          planning_owner_id?: string | null
+          planning_status?: Database["public"]["Enums"]["planning_status"]
           slug: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["trip_status"]
+          subtitle?: string | null
+          tagline?: string | null
         }
         Update: {
           brand_film_mux_id?: string | null
+          capacity?: number | null
           created_at?: string
           description?: string | null
           end_date?: string | null
+          experience_type?: string | null
           hero_image_url?: string | null
           id?: string
           location?: string | null
           lodge_id?: string | null
           name?: string
+          planning_owner_id?: string | null
+          planning_status?: Database["public"]["Enums"]["planning_status"]
           slug?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["trip_status"]
+          subtitle?: string | null
+          tagline?: string | null
         }
         Relationships: [
           {
@@ -469,46 +630,103 @@ export type Database = {
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trips_planning_owner_id_fkey"
+            columns: ["planning_owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       users: {
         Row: {
           avatar_url: string | null
           bio: string | null
+          city: string | null
           created_at: string
           email: string
           full_name: string | null
           id: string
           intro_note: string | null
           last_active_at: string | null
+          member_since: string
           phone: string | null
+          photo_url: string | null
           role: Database["public"]["Enums"]["user_role"]
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           email: string
           full_name?: string | null
           id: string
           intro_note?: string | null
           last_active_at?: string | null
+          member_since?: string
           phone?: string | null
+          photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"]
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
           intro_note?: string | null
           last_active_at?: string | null
+          member_since?: string
           phone?: string | null
+          photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"]
         }
         Relationships: []
+      }
+      vendor_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_contacts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendors: {
         Row: {
@@ -521,6 +739,8 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          notes: string | null
+          photos: Json
           role: Database["public"]["Enums"]["vendor_role"]
           slug: string
           website_url: string | null
@@ -535,6 +755,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          notes?: string | null
+          photos?: Json
           role?: Database["public"]["Enums"]["vendor_role"]
           slug: string
           website_url?: string | null
@@ -549,6 +771,8 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          notes?: string | null
+          photos?: Json
           role?: Database["public"]["Enums"]["vendor_role"]
           slug?: string
           website_url?: string | null
@@ -621,8 +845,16 @@ export type Database = {
     }
     Enums: {
       announcement_channel: "in_app" | "push" | "email" | "all"
+      content_kind: "devotional" | "curriculum"
       inquiry_status: "new" | "contacted" | "qualified" | "closed"
       payment_status: "unpaid" | "deposit" | "paid_in_full" | "refunded"
+      planning_status:
+        | "scoping"
+        | "booked"
+        | "prepping"
+        | "ready"
+        | "live"
+        | "wrapped"
       schedule_category:
         | "hunt"
         | "meal"
@@ -767,8 +999,17 @@ export const Constants = {
   public: {
     Enums: {
       announcement_channel: ["in_app", "push", "email", "all"],
+      content_kind: ["devotional", "curriculum"],
       inquiry_status: ["new", "contacted", "qualified", "closed"],
       payment_status: ["unpaid", "deposit", "paid_in_full", "refunded"],
+      planning_status: [
+        "scoping",
+        "booked",
+        "prepping",
+        "ready",
+        "live",
+        "wrapped",
+      ],
       schedule_category: [
         "hunt",
         "meal",
