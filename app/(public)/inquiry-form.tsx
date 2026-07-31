@@ -57,6 +57,17 @@ export function InquiryForm() {
           placeholder="Tell us a little about yourself…"
         />
       </div>
+      {/* Honeypot — hidden from humans; bots that fill it are dropped server-side. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="company">Company</label>
+        <input
+          id="company"
+          name="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
         {pending ? "Sending…" : "Request an invitation"}
       </Button>

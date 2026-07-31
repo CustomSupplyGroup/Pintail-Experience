@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Allura, Bitter, Inter, Geist_Mono } from "next/font/google";
+import { Allura, Bitter, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -22,20 +22,19 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "The Pintail Experience",
   description:
-    "A curated, faith-based hunting retreat — carried in your pocket from the day you're confirmed until long after the trip ends.",
+    "An intentional, faith-centered hunting retreat — carried in your pocket from the day you're confirmed until long after the trip ends.",
   applicationName: "The Pintail Experience",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Pintail",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
@@ -43,7 +42,6 @@ export const viewport: Viewport = {
   themeColor: "#1f2421",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
 };
 
@@ -55,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${allura.variable} ${bitter.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${allura.variable} ${bitter.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}

@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { recordWaiver } from "./actions";
 import { Button } from "@/components/ui/button";
 
 export function WaiverPad({ userId }: { userId: string }) {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const hasInk = useRef(false);
@@ -97,8 +99,13 @@ export function WaiverPad({ userId }: { userId: string }) {
 
     const result = await recordWaiver(path);
     setSubmitting(false);
-    if (result.ok) toast.success(result.message);
-    else toast.error(result.message);
+    if (result.ok) {
+      toast.success(result.message);
+      // Flip the page to the "Signed" state without a manual reload.
+      router.refresh();
+    } else {
+      toast.error(result.message);
+    }
   }
 
   return (

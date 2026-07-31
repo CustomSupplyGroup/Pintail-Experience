@@ -3,6 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { WaiverPad } from "./waiver-pad";
+import {
+  PLACEHOLDER_WAIVER_TEXT,
+  WAIVER_TITLE,
+  WAIVER_IS_DRAFT,
+} from "@/lib/waiver-copy";
 
 export default async function WaiverPage() {
   const supabase = await createClient();
@@ -53,22 +58,19 @@ export default async function WaiverPage() {
         </Card>
       ) : (
         <div className="space-y-6">
+          {WAIVER_IS_DRAFT && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+              <span className="font-semibold">DRAFT — not legally binding.</span>{" "}
+              This placeholder release will be replaced with the final,
+              attorney-reviewed waiver before the trip.
+            </div>
+          )}
           <Card>
             <CardContent className="space-y-3 pt-6 text-sm text-foreground/85">
-              <p className="font-medium text-foreground">
-                Acknowledgement of Risk &amp; Release of Liability
-              </p>
-              <p>
-                Hunting and outdoor activities carry inherent risks. By signing
-                below, I acknowledge those risks and release The Pintail
-                Experience, its hosts, guides, and partners from liability for
-                injury or loss arising from my participation, to the fullest
-                extent permitted by law.
-              </p>
-              <p className="text-muted-foreground">
-                This is placeholder language — replace with your final,
-                attorney-reviewed waiver before the trip.
-              </p>
+              <p className="font-medium text-foreground">{WAIVER_TITLE}</p>
+              {PLACEHOLDER_WAIVER_TEXT.split(/\n{2,}/).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
             </CardContent>
           </Card>
 

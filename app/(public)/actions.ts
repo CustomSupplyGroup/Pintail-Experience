@@ -12,6 +12,15 @@ export async function submitInquiry(
   _prev: InquiryState,
   formData: FormData,
 ): Promise<InquiryState> {
+  // Honeypot: real users never fill this hidden field. Silently accept (so bots
+  // get no signal) but skip the insert + notification.
+  if (String(formData.get("company") ?? "").trim()) {
+    return {
+      ok: true,
+      message: "Thank you — we'll be in touch about future trips.",
+    };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;

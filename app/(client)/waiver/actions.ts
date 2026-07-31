@@ -3,8 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-const DOCUMENT_VERSION = "pintail-waiver-v1";
+import { WAIVER_VERSION } from "@/lib/waiver-copy";
 
 export async function recordWaiver(
   signaturePath: string,
@@ -33,7 +32,7 @@ export async function recordWaiver(
     user_id: user.id,
     signature_image_path: signaturePath,
     ip_address: ip,
-    document_version: DOCUMENT_VERSION,
+    document_version: WAIVER_VERSION,
   });
   if (waiverErr) {
     console.error("waiver insert failed:", waiverErr.message);
