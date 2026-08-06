@@ -2,6 +2,26 @@
 
 A private, branded experience portal for **The Pintail Experience** — a curated, faith-based, multi-day hunting retreat. The first trip is December 30, 2026, with 16 attendees already paid. The software is the differentiator vs every other faith hunting ministry, most of whom email PDFs and have terrible websites.
 
+## Agent working standards (2026-08-05)
+
+Set after the CustomAI post-org-move infra audit (repos → **CustomSupplyGroup** GitHub org,
+Vercel → **customsupply's projects**, Supabase → **CustomSupply's Org**). Layers on top of
+`~/.claude/CLAUDE.md`.
+
+- **Working autonomy.** Create, commit, write/apply migrations, alter structures, and use
+  connected MCPs without asking on routine work. Act, don't ask. Pause only for genuinely
+  destructive/irreversible actions (dropping tables, force-push, deleting branches, `rm -rf`).
+- **Clean-state rule (non-negotiable — treat as hard).** Every task ends complete and
+  committed. No uncommitted edits; **no orphan migrations** (write **and** apply to the right
+  env **and** commit in the same pass, or don't write it); no half-finished branches. Finish
+  the unit of work or revert it.
+- **Deploy policy — CLIENT (CustomAI).** Full autonomy + clean-state on all *work* — complete
+  it and commit to a branch/PR. Migrations go to a **staging / preview** Supabase env, never
+  the production DB unsolicited. The one human gate is the **final promotion to production**
+  (prod deploy + prod-DB migration) — a promotion gate, not a permission-to-work gate.
+  Everything up to that promotion is autonomous. (These are real paid attendees — the prod
+  gate matters.)
+
 ## What this codebase is
 
 A Next.js 15 web app, PWA-installable, that serves three user types:
